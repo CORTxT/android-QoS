@@ -1110,7 +1110,7 @@ public class IntentHandler extends BroadcastReceiver {
 		Notification notification = new Notification(icon, message, System.currentTimeMillis());
 		notification.flags |= Notification.FLAG_AUTO_CANCEL;
 		Intent notificationIntent = new Intent();
-		notificationIntent.setComponent(new ComponentName(owner.getPackageName(), "com.cortxt.app.mmcui.Activities.SatisfactionSurvey"));
+		notificationIntent.setComponent(new ComponentName(owner.getPackageName(), "com.cortxt.app.uilib.Activities.SatisfactionSurvey"));
 		notificationIntent.putExtra("id", surveyid);
 		notificationIntent.setData((Uri.parse("foobar://"+SystemClock.elapsedRealtime())));
 		notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
