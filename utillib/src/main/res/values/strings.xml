@@ -173,6 +173,7 @@
     <string name="survey_done2">Your answers have been sent.</string>
     <string name="survey_done_title">Done!</string>
     <string name="survey_notification">Participate in our Carrier Survey</string>
+    <string name="survey_notification_title">MyMobileCoverage Survey</string>
 
     <string-array name="survey_questions">
         <item>How satisfied are you with your carrier?</item>

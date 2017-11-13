@@ -1105,7 +1105,13 @@ public class IntentHandler extends BroadcastReceiver {
 			requestQuestions(1);
 		}
 
+		String title = owner.getString (R.string.survey_notification_title);
 		String message = owner.getString (R.string.survey_notification);
+		String appname = Global.getAppName(owner);
+		if (!appname.equals("MyMobileCoverage")) {
+			title = title.replaceAll("MyMobileCoverage", appname);
+			message = message.replaceAll("MyMobileCoverage", appname);
+		}
 		NotificationManager notificationManager = (NotificationManager) owner.getSystemService(Context.NOTIFICATION_SERVICE);
 		Notification notification = new Notification(icon, message, System.currentTimeMillis());
 		notification.flags |= Notification.FLAG_AUTO_CANCEL;
@@ -1117,7 +1123,7 @@ public class IntentHandler extends BroadcastReceiver {
 		int MMC_SURVEY_NOTIFICATION = 8011;
 		PendingIntent pendingIntent = PendingIntent.getActivity(owner, MMC_SURVEY_NOTIFICATION + surveyid, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 		
-		notification.setLatestEventInfo(owner, message, message, pendingIntent);
+		notification.setLatestEventInfo(owner, title, message, pendingIntent);
 		notificationManager.notify(MMC_SURVEY_NOTIFICATION, notification);
 	}
 
