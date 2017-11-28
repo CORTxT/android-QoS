@@ -117,7 +117,7 @@ public class GpsListener {
      * @param location The location received by the gps
      * @return True if the caller wants the gps to stay on for longer; false otherwise.
      */
-    public boolean onLocationUpdate(Location location, int satellites) {
+    public boolean onLocationUpdate(Location location, int satellites, int satellitesInFix) {
         if (location != null)
             LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "GpsListener", "onLocationUpdate", "lat=" + location.getLatitude() + ", lng=" + location.getLongitude() + ", acc=" + location.getAccuracy() + ", type=" + getProvider());
 

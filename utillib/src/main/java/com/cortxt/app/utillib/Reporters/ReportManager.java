@@ -553,6 +553,12 @@ public class ReportManager {
             return mmcService.getLastLocation();
         return mLocalStorageReporter.getLastKnownLocation ();
     }
+    public void setLastKnownLocation (Location location)
+    {
+        if (mmcService != null)
+             mmcService.setLastLocation(location);
+        //return mLocalStorageReporter.getLastKnownLocation ();
+    }
     private Bitmap carrierLogo = null;
     private Carrier carrierCurr = null;
     HashMap<String, String> carrierProps = null;

@@ -7,6 +7,7 @@ import java.util.TimerTask;
 
 import android.app.Service;
 import android.content.Intent;
+import android.location.Criteria;
 import android.location.GpsSatellite;
 import android.location.GpsStatus;
 import android.location.Location;
@@ -55,7 +56,7 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 	private GpsStatus gpsStatus;
 	public long gpsTimeout = 0;
 	private int successfulLocationUpdates = 0;
-	private int mNumberOfSatellites = 0;
+	private int mNumberOfSatellites = 0, mNumberOfSatellitesInFix = 0;
 	private String provider = null;
 	private HandlerThread gpsHandlerThread = new HandlerThread("gps handlerthread");
 	
@@ -191,9 +192,10 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 								numberOfSatellitesUsedInFix++;
 						}
 					}
-					if (numberOfSatellites != mNumberOfSatellites) {
+					if (numberOfSatellites != mNumberOfSatellites || numberOfSatellitesUsedInFix != numberOfSatellites ) {
 						try {
 							setNumberOfSatellites(numberOfSatellites);
+							setNumberOfSatellitesInFix(numberOfSatellitesUsedInFix);
 							//if (listeners.size() > 0 && (!listeners.get(0).isFirstFixReceived() || numberOfSatellitesUsedInFix > 0))
 							if (listeners != null && listeners.size() > 0 && (numberOfSatellitesUsedInFix > 0 || numberOfSatellites > 0))
 								//Log.v(TAG, String.format("Gps status changed; numberOfSatellites:%d; numberOfSatellitesUsedInFix:%d", numberOfSatellites, numberOfSatellitesUsedInFix));
@@ -205,7 +207,7 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 								for (int i = 0; i < listeners.size(); i++) {
 									GpsListener listener = listeners.get(i);
 									if (listener.getProvider().equals(LocationManager.GPS_PROVIDER))
-										listener.onLocationUpdate(null, 0);
+										listener.onLocationUpdate(null, 0, 0);
 								}
 							}
 						} catch (Exception e) {
@@ -272,7 +274,7 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 				GpsListener listener = listeners.get(i);
 				//listener.setFirstFixReceived(true);
 				
-				boolean isAnotherLocationUpdateNeeded = listener.onLocationUpdate(location, mNumberOfSatellites);
+				boolean isAnotherLocationUpdateNeeded = listener.onLocationUpdate(location, mNumberOfSatellites, mNumberOfSatellitesInFix);
 				
 				// If location is accurate enough, consider this the first fix - this listener has new timeout
 				if (location.getAccuracy() < GpsListener.LOCATION_UPDATE_MIN_TREND_ACCURACY && listener.getOperationTimeout() > 0){
@@ -609,18 +611,41 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 							Global.checkPermission(owner, "android.permission.ACCESS_FINE_LOCATION")) {
 						locManager.removeUpdates(this);
 
-						locManager.requestLocationUpdates(
-								listener.getProvider(),
-								LOCATION_UPDATE_MIN_TIME,
-								LOCATION_UPDATE_MIN_DIST,
-								this, gpsHandlerThread.getLooper()
-						);
+						Criteria criteria = new Criteria();
+						if (listener.getProvider().equals(LocationManager.GPS_PROVIDER)) {
+
+							criteria.setAccuracy(Criteria.ACCURACY_FINE);
+							criteria.setSpeedRequired(false);
+							criteria.setAltitudeRequired(false);
+							criteria.setBearingRequired(false);
+							criteria.setCostAllowed(true);
+							locManager.requestLocationUpdates((long)LOCATION_UPDATE_MIN_TIME,
+									(float)LOCATION_UPDATE_MIN_DIST, criteria,
+									this, gpsHandlerThread.getLooper());
+						}else {
+							criteria.setAccuracy(Criteria.ACCURACY_COARSE);
+							criteria.setSpeedRequired(false);
+							criteria.setAltitudeRequired(false);
+							criteria.setBearingRequired(false);
+							criteria.setCostAllowed(true);
+						}
+
+
+//						if (!listener.getProvider().equals(LocationManager.GPS_PROVIDER))
+//							locManager.requestLocationUpdates(
+//								listener.getProvider(),
+//								LOCATION_UPDATE_MIN_TIME,
+//								LOCATION_UPDATE_MIN_DIST,
+//								this, gpsHandlerThread.getLooper()
+//						);
 					}
 					listener.gpsStarted ();
 					if (false && listener.getProvider().equals(LocationManager.NETWORK_PROVIDER))
 						LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "addListenerToCollection", "started " + listener.getProvider() + " location provider");
-					else if (listener.getProvider().equals(LocationManager.GPS_PROVIDER))
+					else if (listener.getProvider().equals(LocationManager.GPS_PROVIDER)) {
 						setNumberOfSatellites(0);
+						setNumberOfSatellitesInFix(0);
+					}
 				}
 			}
 			catch (Exception e)
@@ -679,6 +704,14 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 
 	public void setNumberOfSatellites(int mNumberOfSatellites) {
 		this.mNumberOfSatellites = mNumberOfSatellites;
+	}
+
+	public int getNumberOfSatellitesInFix() {
+		return mNumberOfSatellitesInFix;
+	}
+
+	public void setNumberOfSatellitesInFix(int mNumberOfSatellites) {
+		this.mNumberOfSatellitesInFix = mNumberOfSatellites;
 	}
 	
 	/*

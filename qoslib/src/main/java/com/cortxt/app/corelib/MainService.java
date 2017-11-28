@@ -138,6 +138,7 @@ public class MainService extends Service {
 		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onCreate", getPackageName() + " SERVICE WAS STARTED. isMainServiceRunning = " + isMainServiceRunning());
 
 		try {
+			PreferenceManager.getDefaultSharedPreferences(this).edit().putString(PreferenceKeys.Miscellaneous.USAGE_PROFILE, "1").commit();
 			mmcCallbacks = new LibCallbacks(this);
 			mReportManager = ReportManager.getInstance(getApplicationContext());
 			mPhoneState = new PhoneState (this);
@@ -472,6 +473,8 @@ public class MainService extends Service {
 					bPartial = true;
 				if (EventObj.isDisabledEvent(this, EventObj.DISABLE_SCREENON))
 					bPartial = true;
+				if (trackingManager.isTracking() || eventManager.isEventRunning(EventType.EVT_FILLIN) || eventManager.isEventRunning(EventType.MAN_SPEEDTEST) || wakeLockScreen.isHeld())
+					bPartial = false;
 				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "keepAwake", "Wake=" + bWake);
 				while (wakeLockScreen.isHeld() && (!bPartial))
 					wakeLockScreen.release();

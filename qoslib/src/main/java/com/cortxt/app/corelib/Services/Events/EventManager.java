@@ -430,7 +430,7 @@ public class EventManager {
 							event.gpsListener = new GpsListenerForEvent(event, compEvent);
 						}
 						context.getGpsManager().registerListener(event.gpsListener);
-						context.getNetLocationManager().registerListener(new LocationListenerForEvent(event));  // contingency coarse location listener that will try to write first coarse location to same location database
+						//context.getNetLocationManager().registerListener(new LocationListenerForEvent(event));  // contingency coarse location listener that will try to write first coarse location to same location database
 
 					} else if (event.getEventType().getGenre() == EventTypeGenre.END_OF_COUPLE) {
 						//Location lastLocation = null;
@@ -1270,7 +1270,7 @@ public class EventManager {
 		 * to stop the gps for us. Therefore, after processing the location, we simply return true.
 		 */
 		@Override
-		public boolean onLocationUpdate(Location location, int satellites) {
+		public boolean onLocationUpdate(Location location, int satellites, int satellitesInFix) {
 
 			if (location != null)
 				this.setLastLocation (location);
@@ -1377,53 +1377,53 @@ public class EventManager {
 	 * This class encapsulates the data and the logic for gps management for the {@link MainService} service.
 	 * This class is intended to be used for turning on the gps when an event takes place.
 	 */
-	class LocationListenerForEvent extends GpsListener {
-		EventObj event = null;
-		public LocationListenerForEvent(EventObj _event){
-			super("LocationListenerForEvent");
-			setProvider( LocationManager.NETWORK_PROVIDER);
-			this.setFirstFixRenewalAllowed(false);
-			this.setFirstFixTimeout(30000);
-			event = _event;
-		}
-		/**
-		 * Store the coarse location in the location database
-		 */
-		@Override
-		public boolean onLocationUpdate(Location location, int satellites)
-		{
-			// Don't mistake this for a good GPS fix for an event, it often understates the network location error
-			// Prevents the location from travel detection or fill-ins
-			if (location != null && location.getAccuracy() < GpsListener.LOCATION_UPDATE_MIN_EVENT_ACCURACY)
-				location.setAccuracy(GpsListener.LOCATION_UPDATE_MIN_EVENT_ACCURACY+1);
-			if (location != null && location.getAccuracy() == 0 )
-				location.setAccuracy(1);
-			context.setLastLocation(location);
-			location.setTime(System.currentTimeMillis());
-			context.setLastSatellites(satellites);
-			// Poor accuracy GPS will be stored in the table, but event will only use it if no accurate fix was obtained, and it wont go in trend
-			ContentValues values = ContentValuesGenerator.generateFromLocation(location, 0, satellites);
-			context.getDBProvider().insert(TablesEnum.LOCATIONS.getContentUri(), values);
-
-			if (event.getLocation() == null && location != null)
-				event.setLocation(location, satellites);
-
-			if (event.getLocalID() > 0 && location != null)
-			{
-				context.getReportManager().updateEventField (event.getLocalID(), LocalStorageReporter.Events.KEY_LATITUDE, String.valueOf(location.getLatitude()));
-				context.getReportManager().updateEventField (event.getLocalID(), LocalStorageReporter.Events.KEY_LONGITUDE, String.valueOf(location.getLongitude()));
-			}
-
-			return false;  // stop listening after the first network location
-		}
-
-		@Override
-		public void gpsStarted ()
-		{
-		}
-		@Override
-		public void gpsStopped ()
-		{
-		}
-	}
+//	class LocationListenerForEvent extends GpsListener {
+//		EventObj event = null;
+//		public LocationListenerForEvent(EventObj _event){
+//			super("LocationListenerForEvent");
+//			setProvider( LocationManager.NETWORK_PROVIDER);
+//			this.setFirstFixRenewalAllowed(false);
+//			this.setFirstFixTimeout(30000);
+//			event = _event;
+//		}
+//		/**
+//		 * Store the coarse location in the location database
+//		 */
+//		@Override
+//		public boolean onLocationUpdate(Location location, int satellites)
+//		{
+//			// Don't mistake this for a good GPS fix for an event, it often understates the network location error
+//			// Prevents the location from travel detection or fill-ins
+//			if (location != null && location.getAccuracy() < GpsListener.LOCATION_UPDATE_MIN_EVENT_ACCURACY)
+//				location.setAccuracy(GpsListener.LOCATION_UPDATE_MIN_EVENT_ACCURACY+1);
+//			if (location != null && location.getAccuracy() == 0 )
+//				location.setAccuracy(1);
+//			context.setLastLocation(location);
+//			location.setTime(System.currentTimeMillis());
+//			context.setLastSatellites(satellites);
+//			// Poor accuracy GPS will be stored in the table, but event will only use it if no accurate fix was obtained, and it wont go in trend
+//			ContentValues values = ContentValuesGenerator.generateFromLocation(location, 0, satellites);
+//			context.getDBProvider().insert(TablesEnum.LOCATIONS.getContentUri(), values);
+//
+//			if (event.getLocation() == null && location != null)
+//				event.setLocation(location, satellites);
+//
+//			if (event.getLocalID() > 0 && location != null)
+//			{
+//				context.getReportManager().updateEventField (event.getLocalID(), LocalStorageReporter.Events.KEY_LATITUDE, String.valueOf(location.getLatitude()));
+//				context.getReportManager().updateEventField (event.getLocalID(), LocalStorageReporter.Events.KEY_LONGITUDE, String.valueOf(location.getLongitude()));
+//			}
+//
+//			return false;  // stop listening after the first network location
+//		}
+//
+//		@Override
+//		public void gpsStarted ()
+//		{
+//		}
+//		@Override
+//		public void gpsStopped ()
+//		{
+//		}
+//	}
 }
