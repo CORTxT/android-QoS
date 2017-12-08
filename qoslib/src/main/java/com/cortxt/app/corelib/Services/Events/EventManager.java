@@ -803,9 +803,13 @@ public class EventManager {
 	 * @return
 	 */
 	public EventCouple getEventCouple(EventType startEventType, EventType stopEventType){
-		for (EventCouple item : ongoingEventCouples){
-			if (item.getStartEventType() == startEventType && item.getStopEventType() == stopEventType)
-				return item;
+		try {
+			for (EventCouple item : ongoingEventCouples) {
+				if (item.getStartEventType() == startEventType && item.getStopEventType() == stopEventType)
+					return item;
+			}
+		} catch (Exception e) {
+
 		}
 		return null;
 	}

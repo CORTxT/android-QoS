@@ -201,15 +201,15 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 								//Log.v(TAG, String.format("Gps status changed; numberOfSatellites:%d; numberOfSatellitesUsedInFix:%d", numberOfSatellites, numberOfSatellitesUsedInFix));
 								owner.updateNumberOfSatellites(numberOfSatellites, numberOfSatellitesUsedInFix);
 
-							Location lastloc = owner.getLastLocation();
-							if (lastloc == null || !lastloc.getProvider().equals(LocationManager.GPS_PROVIDER)) //  || lastloc.getTime() < System.currentTimeMillis() - 10000 )
-							{
-								for (int i = 0; i < listeners.size(); i++) {
-									GpsListener listener = listeners.get(i);
-									if (listener.getProvider().equals(LocationManager.GPS_PROVIDER))
-										listener.onLocationUpdate(null, 0, 0);
-								}
-							}
+//							Location lastloc = owner.getLastLocation();
+//							if (lastloc == null || !lastloc.getProvider().equals(LocationManager.GPS_PROVIDER)) //  || lastloc.getTime() < System.currentTimeMillis() - 10000 )
+//							{
+//								for (int i = 0; i < listeners.size(); i++) {
+//									GpsListener listener = listeners.get(i);
+//									if (listener.getProvider().equals(LocationManager.GPS_PROVIDER))
+//										listener.onLocationUpdate(null, 0, 0);
+//								}
+//							}
 						} catch (Exception e) {
 						}
 					}
@@ -268,6 +268,10 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 //				location.getAccuracy(),
 //				listeners
 //			));
+			if (mNumberOfSatellitesInFix > 3 && location.getAccuracy() != 0 && location.getAccuracy() < 120)
+				location.setProvider ("gps");
+			else
+				location.setProvider ("network");
 			owner.getIntentDispatcher().updateLocation(location);
 			owner.processNewFilteredLocation(location, mNumberOfSatellites);
 			for (int i=0; i<listeners.size(); i++) {

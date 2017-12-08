@@ -767,6 +767,7 @@ public class MainService extends Service {
 	}
 	
 	private static Location lastLocation = null;
+	private static Location lastSavedLocation = null;
 	//private long lastEventId = 0;
 	public void processNewFilteredLocation(Location location, int satellites) {
 		//push the new location into the database
@@ -776,12 +777,15 @@ public class MainService extends Service {
 	    {
 			if (location.getLongitude() == 0.0 && location.getLatitude() == 0.0)
 				return;
-			lastLocation = location;
+			lastLocation = location;  // this was causing small location increments not to be recorded
 			// dont store the same location twice
-	    	if (Math.abs(lastLocation.getLatitude() - location.getLatitude()) < 0.00005 &&
-	    			Math.abs(lastLocation.getLongitude() - location.getLongitude()) < 0.00005 &&
-	    			Math.abs(lastLocation.getAccuracy() - location.getAccuracy()) < 8)
-	    		return;
+	    	if (Math.abs(lastSavedLocation.getLatitude() - location.getLatitude()) < 0.00005 &&
+	    			Math.abs(lastSavedLocation.getLongitude() - location.getLongitude()) < 0.00005 &&
+	    			Math.abs(lastSavedLocation.getAccuracy() - location.getAccuracy()) < 8) {
+				//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "SAME Location", "lat=" + location.getLatitude() + ", lng: " + location.getLongitude());
+				return;
+			}
+
 
 	    	// mark event as inaccurate if there was a large jump
 	    	if ((Math.abs(lastLocation.getLatitude() - location.getLatitude()) > 0.0014 ||
@@ -795,8 +799,11 @@ public class MainService extends Service {
 			if (location == null || location.getTime() + 60000 < System.currentTimeMillis())
 				location = null;
 		}
-	    lastLocation = location;
-	    location.setTime(System.currentTimeMillis());
+		//else
+		//	LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "Stored Location", "lat=" + location.getLatitude() + ", lng: " + location.getLongitude());
+
+		lastSavedLocation = location;
+		location.setTime(System.currentTimeMillis());
 		ContentValues values = ContentValuesGenerator.generateFromLocation(location, 0, satellites);
 		getDBProvider(this).insert(TablesEnum.LOCATIONS.getContentUri(), values);
 	}
@@ -1318,9 +1325,9 @@ public class MainService extends Service {
 	public static GpsManagerOld getGpsManager(){
 		return gpsManager;
 	}
-	public static GpsManagerOld getNetLocationManager(){
-		return netLocationManager;
-	}
+	//public static GpsManagerOld getNetLocationManager(){
+	//	return netLocationManager;
+	//}
 
 	public boolean isTravelling ()
 	{

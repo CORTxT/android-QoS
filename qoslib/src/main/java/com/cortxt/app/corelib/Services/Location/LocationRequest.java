@@ -346,7 +346,7 @@ public class LocationRequest {
 				{
 					setFirstFixReceived(true);
 				}
-				if (location.getAccuracy() < firstAccuracy && (bLiveLocation || bBetterThanLastLocation)) // We'll settle for 400 for statistics
+				if (location.getAccuracy() < firstAccuracy)// && (bLiveLocation || bBetterThanLastLocation)) // We'll settle for 400 for statistics
 				{
 					//boolean bLocChanged = false;
 					lastGpsTime = System.currentTimeMillis();
@@ -365,7 +365,7 @@ public class LocationRequest {
 							bLocationChanged = true;
 						if (location.getAccuracy() < finalAccuracy) // && satellites > 0
 						{
-							if (System.currentTimeMillis() - gpsStartTime > 8000 && (getSatellitesInFix() > 3 || (System.currentTimeMillis() - gpsStartTime > 60000 && getSatellites() < 8)))
+							if (System.currentTimeMillis() - gpsStartTime > 8000 && (satellitesInFix > 3 || (System.currentTimeMillis() - gpsStartTime > 60000 && satellites < 8)))
 							{
 								bFinalLocation = true;
 								ReportManager.getInstance(mContext.getApplicationContext()).setLastKnownLocation(location);
