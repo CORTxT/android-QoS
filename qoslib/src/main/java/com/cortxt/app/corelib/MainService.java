@@ -37,6 +37,7 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.view.Gravity;
@@ -910,7 +911,7 @@ public class MainService extends Service {
                 		 catch (Exception e) {}
                 		 return;
                 	 }
-                	 String neighbors = cellHistory.updateNeighborHistory (null, null);
+                	 String neighbors = cellHistory.updateNeighborHistory (null, null, null);
                 	 if (neighbors != null && neighbors.length() > 2)
                 		 intentDispatcher.updateNeighbors (neighbors);
 					 connectionHistory.updateRxTx (MainService.this);
@@ -1503,8 +1504,22 @@ public class MainService extends Service {
 					notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
 					pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 				}
-				notification.setLatestEventInfo(this, title, message, pendingIntent);
-				startForeground(R.integer.MMC_NOTIFICATION_INT, notification);
+				//notification.setLatestEventInfo(this, title, message, pendingIntent);
+				//startForeground(R.integer.MMC_NOTIFICATION_INT, notification);
+
+				NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+				NotificationCompat.Builder bBuilder =
+						new NotificationCompat.Builder(this)
+								.setSmallIcon(icon)
+								.setContentTitle(title)
+								.setContentText(message)
+								.setAutoCancel(false)
+								.setOngoing(true)
+								//.setOnlyAlertOnce(false)
+								//.setDefaults(Notification.DEFAULT_SOUND)
+								//.setPriority(Notification.PRIORITY_DEFAULT)
+								.setContentIntent(pendingIntent);
+				notificationManager.notify(4159, bBuilder.build());
 			}
 			else
 				this.stopForeground(true);

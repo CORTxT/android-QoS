@@ -33,10 +33,12 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
+import android.support.v4.app.NotificationCompat;
 import android.telephony.CellIdentityLte;
 import android.telephony.CellInfo;
 import android.telephony.CellInfoLte;
 import android.telephony.CellLocation;
+import android.telephony.CellSignalStrengthLte;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
@@ -174,7 +176,15 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			
 		try {
             checkCDMACellSID (location);
-			processNewCellLocation(new CellLocationEx(location));
+			CellLocationEx cellEx = new CellLocationEx(location);
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+				List<CellInfo> cells = telephonyManager.getAllCellInfo();
+				if (cells != null && cells.size() > 1 && cells.get(1).isRegistered() && cells.get(1) instanceof CellInfoLte)
+					cellEx.setCellInfo (cells.get(1));
+				else if (cells != null && cells.size() > 0 && cells.get(0).isRegistered())
+					cellEx.setCellInfo (cells.get(0));
+			}
+			processNewCellLocation(cellEx);
 			
 			// See if this cellLocation has inner GsmLocation
 			checkInnerGsmCellLocation (location);
@@ -439,7 +449,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		}
 		mPhoneState.lastKnownSignalStrength = null;
 		//if (signalStrength != null)
-		//	MMCLogger.logToFile(MMCLogger.Level.ERROR, TAG, "onSignalStrengthsChanged", signalStrength.toString());
+		//	LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged", signalStrength.toString());
 		int pref = networkPreference(owner.getApplicationContext());
 		try {
 			if (mPhoneState.previousServiceState == ServiceState.STATE_IN_SERVICE || mPhoneState.previousServiceState == ServiceState.STATE_EMERGENCY_ONLY)
@@ -1346,7 +1356,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		{
 			if (owner.getCellHistory() != null)
 			{
-				owner.getCellHistory().updateNeighborHistory (_list, _list_rssi);
+				owner.getCellHistory().updateNeighborHistory (_list, _list_rssi, null);
 			}
 		}
 	}
@@ -1428,8 +1438,8 @@ public class LibPhoneStateListener extends PhoneStateListener {
 				//toast.show();
 
 				NotificationManager notificationManager = (NotificationManager) owner.getSystemService(Service.NOTIFICATION_SERVICE);
-				Notification notification = new Notification(icon, message, System.currentTimeMillis());
-				notification.flags |= Notification.FLAG_AUTO_CANCEL;
+				//Notification notification = new Notification(icon, message, System.currentTimeMillis());
+				//notification.flags |= Notification.FLAG_AUTO_CANCEL;
 				//Intent notificationIntent = new Intent(MainService.this, Dashboard.class);
 				Intent notificationIntent = new Intent();//, "com.cortxt.app.mmcui.Activities.Dashboard");
 				notificationIntent.setClassName(owner, "com.cortxt.app.uilib.Activities.Dashboard");
@@ -1439,8 +1449,17 @@ public class LibPhoneStateListener extends PhoneStateListener {
 				notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 				PendingIntent pendingIntent = PendingIntent.getActivity(owner, MMC_DROPPED_NOTIFICATION + evtId, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-				notification.setLatestEventInfo(owner, title, message, pendingIntent);
-				notificationManager.notify(MMC_DROPPED_NOTIFICATION, notification);
+				NotificationCompat.Builder bBuilder =
+						new NotificationCompat.Builder(owner)
+								.setSmallIcon(icon)
+								.setContentTitle(title)
+								.setContentText(message)
+								.setAutoCancel(true)
+								//.setOngoing(true)
+								.setContentIntent(pendingIntent);
+				notificationManager.notify(MMC_DROPPED_NOTIFICATION, bBuilder.build());
+				//notification.setLatestEventInfo(owner, title, message, pendingIntent);
+				//notificationManager.notify(MMC_DROPPED_NOTIFICATION, notification);
 				long expirytime = System.currentTimeMillis() + expiry;
 				PreferenceManager.getDefaultSharedPreferences(owner).edit().putLong(PreferenceKeys.Monitoring.NOTIFICATION_EXPIRY, expirytime).commit();
 
@@ -1485,16 +1504,17 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			if (bsLow <= 0 && cellLoc.getCellLocation() instanceof CdmaCellLocation)
 				return;
 
-			ContentValues values = ContentValuesGenerator.generateFromCellLocation(cellLoc, stagedEventId);
+			ContentValues values = ContentValuesGenerator.generateFromCellLocation(owner, cellLoc, stagedEventId);
 			owner.getDBProvider(owner).insert(TablesEnum.BASE_STATIONS.getContentUri(), values);
 			owner.getIntentDispatcher().updateCellID(bsHigh, bsMid, bsLow);
 
-			String neighbors = owner.getCellHistory().updateNeighborHistory(null, null);
+			String neighbors = owner.getCellHistory().updateNeighborHistory(null, null, null);
 			if (neighbors != null && neighbors != "")
 			{
 				owner.getIntentDispatcher().updateNeighbors (neighbors);
 			}
-			else if (android.os.Build.VERSION.SDK_INT >= 10 && telephonyManager.getNetworkType() == PhoneState.NETWORK_NEWTYPE_LTE && (cellLoc.getCellLocation() instanceof GsmCellLocation) == true)
+			//else
+			if (android.os.Build.VERSION.SDK_INT >= 10 && telephonyManager.getNetworkType() == PhoneState.NETWORK_NEWTYPE_LTE && (cellLoc.getCellLocation() instanceof GsmCellLocation) == true)
 			{
 				int cid = bsLow + (bsMid<<16);
 				int pci = ((GsmCellLocation)cellLoc.getCellLocation()).getPsc();
@@ -1503,7 +1523,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 					pci = cellLoc.getBSCode();
 				}
 				neighbors = owner.getCellHistory().updateLteNeighborHistory(bsHigh,cid,pci);
-				owner.getIntentDispatcher().updateLTEIdentity (neighbors);
+				//owner.getIntentDispatcher().updateLTEIdentity (neighbors);
 				owner.getReportManager().setNeighbors(neighbors);
 			}
 
@@ -1775,23 +1795,27 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			if (cellinfos != null && cellinfos.size() > 0)
 			{
 				lastCellInfoString = cellinfos.get(0).toString();
-				if (cellinfos.get(0) instanceof CellInfoLte)
-					lteCell = true;
+//				if (cellinfos.get(0) instanceof CellInfoLte) {
+//					lteCell = true;
+//					CellSignalStrengthLte celllte = ((CellInfoLte) cellinfos.get(0)).getCellSignalStrength();
+//					int rsrp = celllte.getDbm();
+//					LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "CellSignalStrengthLte", "rsrp: " + rsrp + " sig:" + celllte.toString());
+//				}
 			}
 			else
 				lastCellInfoString = "";	
 			tmLastCellInfoUpdate = System.currentTimeMillis();
 
-			if (mPhoneState.getNetworkType() == mPhoneState.NETWORK_NEWTYPE_LTE || lteCell == true)
-			{
-				String neighbors = owner.getCellHistory().updateLteNeighborHistory(cellinfos);
-				if (neighbors != null)
-				{
-					owner.getIntentDispatcher().updateLTEIdentity (neighbors);
-					owner.getReportManager().setNeighbors(neighbors);
-				}
-				
-			}
+//			if (mPhoneState.getNetworkType() == mPhoneState.NETWORK_NEWTYPE_LTE || lteCell == true)
+//			{
+//				String neighbors = owner.getCellHistory().updateLteNeighborHistory(cellinfos.get(0));//cellinfos);
+//				if (neighbors != null)
+//				{
+//					owner.getIntentDispatcher().updateLTEIdentity (neighbors);
+//					owner.getReportManager().setNeighbors(neighbors);
+//				}
+//
+//			}
 			
 //			if (cellinfos != null && cellinfos.size() > 0 && cellinfos.get(0) != null)
 //				for (int i=0; i<cellinfos.size(); i++)
@@ -1866,7 +1890,10 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		if (cell != null)
 		{
 			String strCells = "";
-			
+			if(Build.VERSION.SDK_INT >= 19) {
+				return;
+			}
+
 			Field getFieldPointer = null;
 			try {
 				getFieldPointer = cell.getClass().getDeclaredField("mGsmCellLoc"); //NoSuchFieldException 
@@ -1891,7 +1918,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
                             if (android.os.Build.VERSION.SDK_INT >= 10)
                                 psc = gsmCell.getPsc();
 							String neighbors = owner.getCellHistory().updateLteNeighborHistory(bsHigh,bsLow,psc);
-							owner.getIntentDispatcher().updateLTEIdentity (neighbors);
+							//owner.getIntentDispatcher().updateLTEIdentity (neighbors);
 							owner.getReportManager().setNeighbors(neighbors);
 						}
 					}

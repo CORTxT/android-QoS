@@ -6,7 +6,7 @@ group = 'com.restcomm.app'
 version = '1.0.8'
 android {
 
-    compileSdkVersion 22
+    compileSdkVersion 25
     buildToolsVersion '22.0.1'
 
     defaultConfig {

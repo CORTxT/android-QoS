@@ -1,23 +1,42 @@
 package com.cortxt.app.utillib.ContentProvider;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
+import java.nio.charset.Charset;
+import java.util.Dictionary;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import android.app.Application;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.res.Resources;
 import android.location.Location;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.telephony.CellIdentityLte;
+import android.telephony.CellInfo;
+import android.telephony.CellInfoCdma;
+import android.telephony.CellInfoGsm;
+import android.telephony.CellInfoLte;
+import android.telephony.CellInfoWcdma;
 import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.telephony.cdma.CdmaCellLocation;
 import android.telephony.gsm.GsmCellLocation;
+import android.util.Pair;
 
 import com.cortxt.app.utillib.ContentProvider.Tables.Locations;
 //import com.cortxt.app.MMC.ServicesOld.MMCPhoneStateListenerOld;
 import com.cortxt.app.utillib.DataObjects.CellLocationEx;
 import com.cortxt.app.utillib.DataObjects.SignalEx;
 import com.cortxt.app.utillib.DataObjects.PhoneState;
+import com.cortxt.app.utillib.R;
 import com.cortxt.app.utillib.Utils.Global;
 import com.cortxt.app.utillib.Utils.LoggerUtil;
 import com.cortxt.app.utillib.Utils.PreferenceKeys;
@@ -28,11 +47,11 @@ import org.json.JSONObject;
 
 public class ContentValuesGenerator {
 	
-	private static Context service;
+	//private static Context service;
 
 	
 	public ContentValuesGenerator(Context context){
-		this.service = context;      
+		//this.service = context;
 	}
 
 	/**
@@ -197,11 +216,11 @@ public class ContentValuesGenerator {
 
 				if (getPlatform() == 1) //On Android device
 					signalDB = signal.getGsmSignalStrength();
-				else if (getPlatform() == 3) {//On Blackberry device
-					signalDB = PreferenceManager.getDefaultSharedPreferences(service.getApplicationContext()).
-							getInt(PreferenceKeys.Miscellaneous.BB_SIGNAL, 99);
-
-				}
+//				else if (getPlatform() == 3) {//On Blackberry device
+//					signalDB = PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).
+//							getInt(PreferenceKeys.Miscellaneous.BB_SIGNAL, 99);
+//
+//				}
 				if (signalDB == 99 || signalDB == -1 || signalDB == null) {
 					signalDB = null;
 //				Integer signalLte = signal.getLayer3("mLteSignalStrength");
@@ -465,7 +484,7 @@ public class ContentValuesGenerator {
 	 * or {@link TelephonyManager#PHONE_TYPE_GSM}.
 	 * @return
 	 */
-	public static ContentValues generateFromCellLocation(CellLocationEx cellLoc, long stagedEventId){
+	public static ContentValues generateFromCellLocation(Context context, CellLocationEx cellLoc, long stagedEventId){
 		ContentValues values = new ContentValues();
 		
 		int bsLow = cellLoc.getBSLow(), bsMid = cellLoc.getBSMid(), bsHigh = cellLoc.getBSHigh();
@@ -510,6 +529,39 @@ public class ContentValuesGenerator {
 				}
 			} catch (Exception e) {
 			}
+		}
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && context != null)
+		{
+			TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+			List<CellInfo> cells = telephonyManager.getAllCellInfo();
+			int arfcn = 0;
+			int band = 0;
+			int timing = 0;
+			for (int i=0; i<cells.size(); i++) {
+				CellInfo ci = cells.get(i);
+				if (ci.isRegistered()) {
+					if (ci instanceof CellInfoLte) {
+						arfcn = ((CellInfoLte) ci).getCellIdentity().getEarfcn();
+						band = getBand(context, arfcn, 5);
+						timing = ((CellInfoLte) ci).getCellSignalStrength().getTimingAdvance();
+					} else if (ci instanceof CellInfoWcdma) {
+						arfcn = ((CellInfoWcdma) ci).getCellIdentity().getUarfcn();
+						band = getBand(context, arfcn, 3);
+						int b = band;
+					} else if (ci instanceof CellInfoGsm) {
+						arfcn = ((CellInfoGsm) ci).getCellIdentity().getArfcn();
+						band = getBand(context, arfcn, 3);
+					} else if (ci instanceof CellInfoCdma) {
+					}
+					if (arfcn > 0 && arfcn < 1000000) {
+						bsChan = arfcn;
+						if (band > 0)
+							bsBand = band;
+					}
+					//break;
+				}
+			}
+
 		}
 
 		String netType = "";
@@ -558,13 +610,193 @@ public class ContentValuesGenerator {
 	}
 
 	
- public static int getPlatform(){
-	 if(android.os.Build.BRAND.toLowerCase().contains("blackberry") && Build.VERSION.SDK_INT < 18) {
-		 return 3;
-	 } 
-	 else {
-		 return 1;
-	 }           
- }
+	 public static int getPlatform(){
+		 if(android.os.Build.BRAND.toLowerCase().contains("blackberry") && Build.VERSION.SDK_INT < 18) {
+			 return 3;
+		 }
+		 else {
+			 return 1;
+		 }
+	 }
+
+	public static HashMap<Integer, BandInfo> bandinfos = null, lte_bandinfos = null;
+	// Get the band number from the frequency
+	public static int getBand(Context context, int freq, int tier)
+	{
+		if (freq == 0 || freq > 10000000)
+			return 0;
+		HashMap<Integer, BandInfo> bands = null;
+		if (bandinfos == null)
+			loadBandInfo(context);
+		if (tier == 5)
+			bands = lte_bandinfos;
+		else
+			bands = bandinfos;
+
+
+		for (Map.Entry<Integer, BandInfo> entry : bands.entrySet())
+		{
+			BandInfo bandinfo = entry.getValue();
+			if (bandinfo != null){
+				if (bandinfo.uarfcn_dl != null && bandinfo.uarfcn_dl.length > 1 && freq >= bandinfo.uarfcn_dl[0] && freq <= bandinfo.uarfcn_dl[1]) {
+					return bandinfo.band;//entry.getKey();
+				}
+				if (bandinfo.uarfcn_dl_add != null) {
+					for (int i=0; i<bandinfo.uarfcn_dl_add.length; i++) {
+						if (bandinfo.uarfcn_dl_add[i] == freq) {
+							return bandinfo.band;//entry.getKey();
+						}
+					}
+				}
+				//if (bandinfo.frequency == freq) {
+				//	return bandinfo.frequency;//entry.getKey();
+				//}
+			}
+
+			//if (entry.getValue() != null && entry.getValue().frequency == freq)
+			//	return entry.getKey();
+		}
+		return 0;
+	}
+
+	// reads resources regardless of their size
+	public static byte[] getResource(int id, Context context) throws IOException {
+		Resources resources = context.getResources();
+		InputStream is = resources.openRawResource(id);
+
+		ByteArrayOutputStream bout = new ByteArrayOutputStream();
+
+		byte[] readBuffer = new byte[4 * 1024];
+
+		try {
+			int read;
+			do {
+				read = is.read(readBuffer, 0, readBuffer.length);
+				if(read == -1) {
+					break;
+				}
+				bout.write(readBuffer, 0, read);
+			} while(true);
+
+			return bout.toByteArray();
+		} finally {
+			is.close();
+		}
+	}
+
+	// reads an UTF-8 string resource
+	public static String getStringResource(Context context, int id)  {
+		String str = null;
+		try {
+			str = new String(getResource(id, context));//, Charset.forName("UTF-8"));
+		} catch (Exception e) {
+
+		}
+		return str;
+	}
+
+	public static void loadBandInfo(Context context)
+	{
+		bandinfos = new  HashMap<Integer, BandInfo>();
+		lte_bandinfos = new  HashMap<Integer, BandInfo>();
+
+		String bandinfo = getStringResource(context, R.raw.bands);
+		String bandinfo_LTE = getStringResource(context, R.raw.bandslte);
+		//CovLib
+		String[] lines = bandinfo.split("\n");
+		String header = lines[0], line;
+		int i;
+		for (i = 1; i < lines.length; i++)
+		{
+			line = lines[i];
+			String[] parts = line.split("\t");
+			BandInfo bi = new BandInfo(parts);
+			if (bi.band > 0)
+				bandinfos.put(bi.band, bi);
+		}
+
+		lines = bandinfo_LTE.split("\n");
+		for (i = 1; i < lines.length; i++)
+		{
+			line = lines[i];
+			String[] parts = line.split("\t");
+			BandInfo bi = new BandInfo(parts);
+			if (bi.band > 0)
+				lte_bandinfos.put(bi.band, bi);
+		}
+
+	}
+
+	public static class BandInfo
+	{
+		public int band = 0, frequency = 0;
+		public int[] freq_dl = new int[2], freq_ul = new int[2];
+		public int[] uarfcn_dl = new int[2], uarfcn_dl_add = null, uarfcn_ul = new int[2], uarfcn_ul_add = null;
+		public int offset1, offset2;
+		public String name;
+
+		public BandInfo(String[] parts)
+		{
+			if (parts.length < 12) {
+				String msg = "bad entry";
+				return;
+			}
+			try
+			{
+				int i;
+				if (parts[0] != null && parts[0].trim().length() > 0)
+					band = Integer.valueOf(parts[0].trim());
+				if (parts[1] != null && parts[1].trim().length() > 0)
+					frequency = Integer.valueOf(parts[1].trim());
+				name = parts[2];
+				String[] fparts = parts[3].split("-");
+				if (fparts.length > 1)
+				{
+					freq_ul[0] = Integer.valueOf(fparts[0].trim());
+					freq_ul[1] = Integer.valueOf(fparts[1].trim());
+				}
+				fparts = parts[4].split("-");
+				if (fparts.length > 1)
+				{
+					freq_dl[0] = Integer.valueOf(fparts[0].trim());
+					freq_dl[1] = Integer.valueOf(fparts[1].trim());
+				}
+				fparts = parts[5].split("-");
+				if (fparts.length > 1)
+				{
+					uarfcn_ul[0] = Integer.valueOf(fparts[0].trim());
+					uarfcn_ul[1] = Integer.valueOf(fparts[1].trim());
+				}
+				fparts = parts[6].split(",");
+				if (fparts.length > 1)
+				{
+					uarfcn_ul_add = new int[fparts.length];
+					for (i = 0; i < fparts.length; i++)
+						uarfcn_ul_add[i] = Integer.valueOf(fparts[i].trim());
+				}
+				fparts = parts[7].split("-");
+				if (fparts.length > 1)
+				{
+					uarfcn_dl[0] = Integer.valueOf(fparts[0].trim());
+					uarfcn_dl[1] = Integer.valueOf(fparts[1].trim());
+				}
+				fparts = parts[8].split(",");
+				if (fparts.length > 1)
+				{
+					uarfcn_dl_add = new int[fparts.length];
+					for (i = 0; i < fparts.length; i++)
+						uarfcn_dl_add[i] = Integer.valueOf(fparts[i].trim());
+				}
+				if (parts[10].trim().length() > 1)
+					offset1 = Integer.valueOf(parts[10].trim());
+				if (parts[11].trim().length() > 1)
+					offset2 = Integer.valueOf(parts[11].trim());
+			}
+			catch (Exception e)
+			{
+				String err = e.toString();
+			}
+		}
+	}
 
 }

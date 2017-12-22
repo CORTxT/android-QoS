@@ -413,6 +413,7 @@ public class PhoneState {
     }
     public void clearLastMMCSignal(){
         lastKnownMMCSignal = null;
+
     }
 
     /*******************************************

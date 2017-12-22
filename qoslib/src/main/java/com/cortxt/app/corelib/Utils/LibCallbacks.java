@@ -67,7 +67,7 @@ public class LibCallbacks implements ICallbacks {
     public String getNeighbors () {
         if (mContext != null)
         {
-            mContext.getCellHistory().updateNeighborHistory(null, null);
+            mContext.getCellHistory().updateNeighborHistory(null, null, null);
             int lastService = mContext.getPhoneState().getLastServiceState();
             mContext.getIntentDispatcher().updateConnection(",,,," + lastService);
             mContext.setEnggQueryTime();

@@ -249,8 +249,8 @@ public class EventManager {
 
 	public EventObj startPhoneEvent(EventType startEventType, EventType stopEventType)
 	{
-		if (startEventType == EventType.COV_4G_NO)
-			context.getIntentDispatcher().updateLTEIdentity (null);
+		//if (startEventType == EventType.COV_4G_NO)
+		//	context.getIntentDispatcher().updateLTEIdentity (null);
 
 		return startPhoneEvent(startEventType, stopEventType, System.currentTimeMillis());
 	}
@@ -514,6 +514,7 @@ public class EventManager {
 			if (signal != null)
 			{
 				signal.setTimestamp(timestamp);
+				context.getCellHistory().lastLTECell = null;
 				context.getPhoneState().clearLastMMCSignal();  // to force a duplicate signal to be added
 				context.getPhoneStateListener().processNewMMCSignal(signal);
 			}

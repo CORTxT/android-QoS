@@ -26,6 +26,7 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.PowerManager.WakeLock;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.telephony.TelephonyManager;
@@ -1113,8 +1114,8 @@ public class IntentHandler extends BroadcastReceiver {
 			message = message.replaceAll("MyMobileCoverage", appname);
 		}
 		NotificationManager notificationManager = (NotificationManager) owner.getSystemService(Context.NOTIFICATION_SERVICE);
-		Notification notification = new Notification(icon, message, System.currentTimeMillis());
-		notification.flags |= Notification.FLAG_AUTO_CANCEL;
+		//Notification notification = new Notification(icon, message, System.currentTimeMillis());
+		//notification.flags |= Notification.FLAG_AUTO_CANCEL;
 		Intent notificationIntent = new Intent();
 		notificationIntent.setComponent(new ComponentName(owner.getPackageName(), "com.cortxt.app.uilib.Activities.SatisfactionSurvey"));
 		notificationIntent.putExtra("id", surveyid);
@@ -1122,9 +1123,19 @@ public class IntentHandler extends BroadcastReceiver {
 		notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		int MMC_SURVEY_NOTIFICATION = 8011;
 		PendingIntent pendingIntent = PendingIntent.getActivity(owner, MMC_SURVEY_NOTIFICATION + surveyid, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-		
-		notification.setLatestEventInfo(owner, title, message, pendingIntent);
-		notificationManager.notify(MMC_SURVEY_NOTIFICATION, notification);
+
+		NotificationCompat.Builder bBuilder =
+				new NotificationCompat.Builder(owner)
+						.setSmallIcon(icon)
+						.setContentTitle(title)
+						.setContentText(message)
+						.setAutoCancel(true)
+						//.setOngoing(true)
+						.setContentIntent(pendingIntent);
+		notificationManager.notify(MMC_SURVEY_NOTIFICATION, bBuilder.build());
+
+		//notification.setLatestEventInfo(owner, title, message, pendingIntent);
+		//notificationManager.notify(MMC_SURVEY_NOTIFICATION, notification);
 	}
 
 	public class GcmKeepAlive  {

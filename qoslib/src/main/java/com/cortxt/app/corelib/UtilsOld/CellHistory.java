@@ -6,19 +6,24 @@ import java.util.List;
 import com.cortxt.app.utillib.DataObjects.CellLocationEx;
 import com.cortxt.app.utillib.DataObjects.PhoneState;
 import com.cortxt.app.utillib.Utils.LoggerUtil;
+import com.cortxt.com.mmcextension.rilreader.MMCLogger;
 
 import android.annotation.TargetApi;
 import android.os.Build;
 import android.telephony.CellIdentityCdma;
 import android.telephony.CellIdentityGsm;
 import android.telephony.CellIdentityLte;
+import android.telephony.CellIdentityWcdma;
 import android.telephony.CellInfo;
 import android.telephony.CellInfoCdma;
 import android.telephony.CellInfoGsm;
 import android.telephony.CellInfoLte;
+import android.telephony.CellInfoWcdma;
 import android.telephony.CellLocation;
 import android.telephony.CellSignalStrengthCdma;
 import android.telephony.CellSignalStrengthGsm;
+import android.telephony.CellSignalStrengthLte;
+import android.telephony.CellSignalStrengthWcdma;
 import android.telephony.NeighboringCellInfo;
 import android.telephony.TelephonyManager;
 import android.telephony.cdma.CdmaCellLocation;
@@ -34,7 +39,7 @@ public class CellHistory {
 	private List<CellidSample> neighbor_history = new ArrayList<CellidSample>();
 	private long tmLastNeighborUpdate = 0, tmLastCellUpdate = 0, tmLastLTEUpdate = 0;
 	private String lastCellString = "";
-	private CellidSample lastLTECell = null;
+	public CellidSample lastLTECell = null;
 	public static final String TAG = CellHistory.class.getSimpleName();
 	
 	public CellHistory (TelephonyManager _telephonyManager)
@@ -106,7 +111,7 @@ public class CellHistory {
 	
 	// Called when a neighbor list is detected in the RadioLog
 	// It augments that neighbor list with the neighbor from the API
-	public String updateNeighborHistory (int[] _list, int[] _list_rssi)
+	public String updateNeighborHistory (int[] _list, int[] _list_rssi, int[] _list_chan)
 	{
 		int i;
 		//if (tmLastNeighborUpdate + 2000 > System.currentTimeMillis())
@@ -128,10 +133,10 @@ public class CellHistory {
 				{
 					List<CellInfo> cells = null;
 					cells = telephonyManager.getAllCellInfo();
-					if (cells != null && cells.size() > 0 && cells.get(0) instanceof CellInfoLte) // && telephonyManager.getNetworkType() == PhoneState.NETWORK_NEWTYPE_LTE)
-					{
-						return updateLteNeighborHistory(cells);
-					}
+//					if (cells != null && cells.size() > 0 && cells.get(0) instanceof CellInfoLte) // && telephonyManager.getNetworkType() == PhoneState.NETWORK_NEWTYPE_LTE)
+//					{
+//						return updateLteNeighborHistory(cells);
+//					}
 					//if (cells == null)
 					//	LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "updateNeighborHistory", "cells = null");
 
@@ -143,6 +148,7 @@ public class CellHistory {
 							len = 8;
 						_list = new int[len];
 						_list_rssi = new int[len];
+						_list_chan = new int[len];
 						_type = new String[len];
 						for ( i =0; i<len; i++)
 						{ 
@@ -152,19 +158,26 @@ public class CellHistory {
 							String classname = neighbor.getClass().toString();
 							//LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "updateNeighborHistory", "cells[" + i + "]=" + neighbor.toString());
 							//Log.d(TAG, "cells[" + c + "]=" + cells.get(c).toString());
-							if (gen < 3)
-								_type[i] = "2G";
-							else
-								_type[i] = "3G";
-							if (neighbor.isRegistered())
-								_type[i] += "*";
+//							if (gen < 3)
+//								_type[i] = "2G";
+//							else if (gen < 5)
+//								_type[i] = "3G";
+//							else if (gen == 5)
+//								_type[i] = "LTE";
+//							if (neighbor.isRegistered())
+//								_type[i] += "*";
+
 							if (neighbor instanceof CellInfoCdma)
 							{
 								CellIdentityCdma cdmacell =((CellInfoCdma) neighbor).getCellIdentity();
 								CellSignalStrengthCdma cdmasig = ((CellInfoCdma) neighbor).getCellSignalStrength();
-								if (cdmacell.getBasestationId() > 0)
+								if (cdmacell.getBasestationId() > 0 && false)  // Don't include CDMA in the neighbor lists, it doesnt work
 								{	_list[n] = cdmacell.getBasestationId();
 									_list_rssi[n] = cdmasig.getEvdoDbm();
+									_list_chan[n] = 0;
+									_type[n] = "3G";
+									if (neighbor.isRegistered())
+										_type[n] += "*";
 									n++;
 								//else if (neighbor.getSystemId() > 0)
 								//	_list[n] = (neighbor.getLac()<<16) + neighbor.getCid();
@@ -172,16 +185,22 @@ public class CellHistory {
 								else
 									bValid = false;
 							}
-							else if (neighbor instanceof CellInfoGsm)
+							else if (neighbor instanceof CellInfoGsm && gen < 5)
 							{
 								CellIdentityGsm gsmcell =((CellInfoGsm) neighbor).getCellIdentity();
 								CellSignalStrengthGsm gsmsig = ((CellInfoGsm) neighbor).getCellSignalStrength();
+								_type[n] = "2G";
+								if (neighbor.isRegistered())
+									_type[n] += "*";
+								if (Build.VERSION.SDK_INT >= 24 && gsmcell.getArfcn() > 0 && gsmcell.getArfcn() < 1000000)
+									_list_chan[n] = gsmcell.getArfcn();
 								if (gsmcell.getPsc() > 0 && gsmcell.getPsc() < 1000)
 								{	_list[n] = gsmcell.getPsc();
 									_list_rssi[n] = gsmsig.getDbm();
+
 									n++;
 								}
-								else if (gsmcell.getCid() > 0)
+								else if (gsmcell.getCid() > 0 && gsmcell.getCid() < 10000000)
 								{
 									_list[n] = (gsmcell.getLac()<<16) + gsmcell.getCid();
 									_list_rssi[n] = gsmsig.getDbm();
@@ -189,14 +208,37 @@ public class CellHistory {
 								else
 									bValid = false;
 							}
-							else if (neighbor.getClass().toString().equals("class android.telephony.CellInfoWcdma"))
+							else if (neighbor instanceof CellInfoLte)
+							{
+								if (neighbor.isRegistered())
+									updateLteNeighborHistory(neighbor);
+								else {
+									CellIdentityLte ltecell = ((CellInfoLte) neighbor).getCellIdentity();
+
+									CellSignalStrengthLte ltesig = ((CellInfoLte) neighbor).getCellSignalStrength();
+									if (Build.VERSION.SDK_INT >= 24 && ltecell.getEarfcn() > 0 && ltecell.getEarfcn() < 1000000)
+										_list_chan[n] = ltecell.getEarfcn();
+									if (ltecell.getPci() > 0 && ltecell.getPci() < 1000) {
+										_list[n] = ltecell.getPci();
+										_list_rssi[n] = ltesig.getDbm();
+										_type[n] = "4G";
+										n++;
+									} else
+										bValid = false;
+								}
+							}
+							else if (Build.VERSION.SDK_INT >= 18 && neighbor instanceof CellInfoWcdma && gen < 5)
 							{
 								try {
-									Object gsmcell = neighbor.getClass().getDeclaredMethod("getCellIdentity").invoke(neighbor, (Object[]) null);
-									Object gsmsig = neighbor.getClass().getDeclaredMethod("getCellSignalStrength").invoke(neighbor, (Object[]) null);
-									Integer psc = (Integer)gsmcell.getClass().getDeclaredMethod("getPsc").invoke(gsmcell, (Object[]) null);
-									Integer cid = (Integer)gsmcell.getClass().getDeclaredMethod("getCid").invoke(gsmcell, (Object[]) null);
-									Integer dbm = (Integer)gsmsig.getClass().getDeclaredMethod("getDbm").invoke(gsmsig, (Object[]) null);
+									CellIdentityWcdma wcdmacell = ((CellInfoWcdma) neighbor).getCellIdentity();
+									CellSignalStrengthWcdma wcdmasig = ((CellInfoWcdma) neighbor).getCellSignalStrength();
+									Integer psc = wcdmacell.getPsc();
+									Integer dbm = wcdmasig.getDbm();
+									_type[n] = "3G";
+									if (neighbor.isRegistered())
+										_type[n] += "*";
+									if (Build.VERSION.SDK_INT >= 24 && wcdmacell.getUarfcn() > 0 && wcdmacell.getUarfcn() < 1000000)
+										_list_chan[n] = wcdmacell.getUarfcn();
 									if (psc > 0 && psc < 1000)
 									{	_list[n] = psc;
 										//if (neighbor.isRegistered())
@@ -204,13 +246,13 @@ public class CellHistory {
 										_list_rssi[n] = dbm;
 										n++;
 									}
-									else if (cid > 0 && cid < 65536)
-									{	_list[n] = cid;
-										//if (neighbor.isRegistered())
-										//	_list[n] += 10000;
-										_list_rssi[n] = dbm;
-										n++;
-									}
+//									else if (cid > 0 && cid < 65536)
+//									{	_list[n] = cid;
+//										//if (neighbor.isRegistered())
+//										//	_list[n] += 10000;
+//										_list_rssi[n] = dbm;
+//										n++;
+//									}
 									else
 											bValid = false;
 								} catch (Exception e) {
@@ -240,7 +282,7 @@ public class CellHistory {
 				}
 				catch (Exception e)
 				{
-					
+					MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "updateNeighborHistory", "inner exception", e);
 				}}
 				if (_list == null)
 				{
@@ -296,9 +338,12 @@ public class CellHistory {
 				// create and add a neighbor cell item for each neighbor
 				for (i=0; i<_list.length; i++)
 				{
-					if (_list[i] != 0)
+					if (_list[i] != 0 && !_type[i].contains("*"))
 					{
 						CellidSample smp = new CellidSample(_type[i], _list[i], _list_rssi[i]);
+						if (_list_chan != null && _list_chan[i] != 0) {
+							smp.val3 = _list_chan[i];
+						}
 						// Update Neighbor list history a maximum of once per 2 seconds
 						neighbor_history.add (smp);
 						stringNeighboring = stringNeighboring
@@ -312,12 +357,13 @@ public class CellHistory {
 					return null;
 				lastCellString = stringNeighboring;
 				//if (neighboringList.size() > 0)
-				//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "updateNeighborHistory", stringNeighboring);
+				MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "updateNeighborHistory", stringNeighboring);
 			     
 				return stringNeighboring;
 			}
 			catch (Exception e)
 			{
+				MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "updateNeighborHistory", "exception", e);
 				return "";
 			}
 			finally 
@@ -402,7 +448,20 @@ public class CellHistory {
 		return "";
 	}
 	
-	@TargetApi(17) 
+	@TargetApi(17)
+	public String updateLteNeighborHistory (CellInfo cellinfo)
+	{
+		CellIdentityLte cellIDLte = ((CellInfoLte)cellinfo).getCellIdentity();
+		if (cellIDLte.getTac() > 0 && cellIDLte.getTac() < 100000 && cellinfo.isRegistered())
+		{
+			int tac = cellIDLte.getTac(), pci = cellIDLte.getPci(), ci = cellIDLte.getCi();
+			String lteString = updateLteNeighborHistory (tac, ci, pci);
+			return lteString;
+		}
+		return null;
+	}
+
+	@TargetApi(17)
 	public String updateLteNeighborHistory (List<CellInfo> cellinfos)
 	{
 		if (cellinfos == null || cellinfos.size() == 0)
@@ -415,15 +474,25 @@ public class CellHistory {
 			}
 			return null;
 		}
+		String lteString = null;
+		lastLTECell = null;
 		for(int i = 0; i < cellinfos.size(); i++) {
 			// All we're interested in here is getting new Lte cell identity with this new API. Otherwise ignore and use CellLocation updates
 			if (cellinfos.get(i) instanceof CellInfoLte)
 			{
 				CellIdentityLte cellIDLte = ((CellInfoLte)cellinfos.get(i)).getCellIdentity();
-				if (cellIDLte.getTac() > 0 && cellIDLte.getTac() < 100000)
+				if (cellIDLte.getTac() > 0 && cellIDLte.getTac() < 100000 && cellinfos.get(i).isRegistered())
 				{
 					int tac = cellIDLte.getTac(), pci = cellIDLte.getPci(), ci = cellIDLte.getCi();
-					return updateLteNeighborHistory (tac, ci, pci);
+					lteString =  updateLteNeighborHistory (tac, ci, pci);
+				} else {
+					if (cellIDLte.getPci() > 0 && cellIDLte.getPci() < 1000)
+					{
+						CellidSample smp = new CellidSample("L", 0, 0, cellIDLte.getPci());
+						neighbor_history.add (smp);
+					}
+					//else
+					//	bValid = false;
 				}
 			}
 			else  // Lte CellIdentity contains bogus ids, treat like its null
@@ -434,7 +503,7 @@ public class CellHistory {
 				
 			}
 		}
-		return null;
+		return lteString;
 	}
 	
 	public String updateLteNeighborHistory (int tac, int ci, int pci)
@@ -448,7 +517,7 @@ public class CellHistory {
 		if (tac <= 0 || tac > 2000000000)
 			return null;
 		
-		CellidSample smp = new CellidSample("L", tac, ci, pci);	
+		CellidSample smp = new CellidSample("L", tac, ci, pci);
 		//if (i==0)
 		{
 			//int ciHigh = ci >> 16;
