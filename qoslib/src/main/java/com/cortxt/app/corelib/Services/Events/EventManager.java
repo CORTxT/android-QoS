@@ -249,8 +249,8 @@ public class EventManager {
 
 	public EventObj startPhoneEvent(EventType startEventType, EventType stopEventType)
 	{
-		//if (startEventType == EventType.COV_4G_NO)
-		//	context.getIntentDispatcher().updateLTEIdentity (null);
+		if (startEventType == EventType.COV_4G_NO)
+			context.getIntentDispatcher().updateLTEIdentity (null);
 
 		return startPhoneEvent(startEventType, stopEventType, System.currentTimeMillis());
 	}

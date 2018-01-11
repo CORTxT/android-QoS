@@ -495,8 +495,8 @@ public class ContentValuesGenerator {
 		if (bsHigh == 65535)
 			bsHigh = -1;
 		int bsCode = cellLoc.getBSCode();
+		int bsChan = cellLoc.getBSChan();
 		int bsBand = -1;
-		int bsChan = -1;
 		if (Global.getServiceMode() != null) {
 			int val;
 			try {
@@ -530,39 +530,45 @@ public class ContentValuesGenerator {
 			} catch (Exception e) {
 			}
 		}
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && context != null)
-		{
-			TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-			List<CellInfo> cells = telephonyManager.getAllCellInfo();
-			int arfcn = 0;
-			int band = 0;
-			int timing = 0;
-			for (int i=0; i<cells.size(); i++) {
-				CellInfo ci = cells.get(i);
-				if (ci.isRegistered()) {
-					if (ci instanceof CellInfoLte) {
-						arfcn = ((CellInfoLte) ci).getCellIdentity().getEarfcn();
-						band = getBand(context, arfcn, 5);
-						timing = ((CellInfoLte) ci).getCellSignalStrength().getTimingAdvance();
-					} else if (ci instanceof CellInfoWcdma) {
-						arfcn = ((CellInfoWcdma) ci).getCellIdentity().getUarfcn();
-						band = getBand(context, arfcn, 3);
-						int b = band;
-					} else if (ci instanceof CellInfoGsm) {
-						arfcn = ((CellInfoGsm) ci).getCellIdentity().getArfcn();
-						band = getBand(context, arfcn, 3);
-					} else if (ci instanceof CellInfoCdma) {
-					}
-					if (arfcn > 0 && arfcn < 1000000) {
-						bsChan = arfcn;
-						if (band > 0)
-							bsBand = band;
-					}
-					//break;
-				}
-			}
-
+		if (bsChan > 0 && bsChan < 10000000) {
+			if (cellLoc.isLTE())
+				bsBand = getBand(context, bsChan, 5);
+			else
+				bsBand = getBand(context, bsChan, 3);
 		}
+//		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && context != null)
+//		{
+//			TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+//			List<CellInfo> cells = telephonyManager.getAllCellInfo();
+//			int arfcn = 0;
+//			int band = 0;
+//			int timing = 0;
+//			for (int i=0; i<cells.size(); i++) {
+//				CellInfo ci = cells.get(i);
+//				if (ci.isRegistered()) {
+//					if (ci instanceof CellInfoLte) {
+//						arfcn = ((CellInfoLte) ci).getCellIdentity().getEarfcn();
+//						band = getBand(context, arfcn, 5);
+//						timing = ((CellInfoLte) ci).getCellSignalStrength().getTimingAdvance();
+//					} else if (ci instanceof CellInfoWcdma) {
+//						arfcn = ((CellInfoWcdma) ci).getCellIdentity().getUarfcn();
+//						band = getBand(context, arfcn, 3);
+//						int b = band;
+//					} else if (ci instanceof CellInfoGsm) {
+//						arfcn = ((CellInfoGsm) ci).getCellIdentity().getArfcn();
+//						band = getBand(context, arfcn, 3);
+//					} else if (ci instanceof CellInfoCdma) {
+//					}
+//					if (arfcn > 0 && arfcn < 1000000) {
+//						bsChan = arfcn;
+//						if (band > 0)
+//							bsBand = band;
+//					}
+//					//break;
+//				}
+//			}
+//
+//		}
 
 		String netType = "";
 		if (cellLoc.getCellLocation() != null && cellLoc.getCellLocation() instanceof GsmCellLocation)

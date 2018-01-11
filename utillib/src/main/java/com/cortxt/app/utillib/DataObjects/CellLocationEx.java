@@ -3,6 +3,7 @@ package com.cortxt.app.utillib.DataObjects;
 import java.lang.reflect.Method;
 import java.util.List;
 
+import android.annotation.TargetApi;
 import android.os.Build;
 import android.telephony.CellIdentityCdma;
 import android.telephony.CellIdentityGsm;
@@ -27,6 +28,7 @@ import org.json.JSONObject;
 public class CellLocationEx {
 	private CellLocation cellLoc;
 	private CellInfo cellInfo;
+	private CellInfoCdma cdmaInfo;
 	private long cellIdTimestamp;
 	private static Method getPscMethodPointer;
 	private static final String TAG = CellLocationEx.class.getSimpleName();
@@ -123,6 +125,9 @@ public class CellLocationEx {
 	public int getBSCode () {
 		if (Build.VERSION.SDK_INT >= 19 && cellInfo != null) {
 			if (cellInfo instanceof CellInfoCdma) {
+				if (lteInfo != null && lteInfo.getCellIdentity().getPci() > 0) {
+					return lteInfo.getCellIdentity().getPci();
+				}
 				return 0;
 			} else if (cellInfo instanceof CellInfoGsm) {
 				CellIdentityGsm cellid = ((CellInfoGsm) cellInfo).getCellIdentity();
@@ -171,7 +176,9 @@ public class CellLocationEx {
 	public int getBSChan () {
 		if (Build.VERSION.SDK_INT >= 24 && cellInfo != null) {
 			if (cellInfo instanceof CellInfoCdma) {
-				return 0;
+				if (lteInfo != null) {
+					bsChan = lteInfo.getCellIdentity().getEarfcn();
+				}
 			} else if (cellInfo instanceof CellInfoGsm) {
 				CellIdentityGsm cellid = ((CellInfoGsm) cellInfo).getCellIdentity();
 				bsChan = cellid.getArfcn();
@@ -219,6 +226,12 @@ public class CellLocationEx {
 		return bsChan;
 
 	}
+	public boolean isLTE () {
+		if (lteInfo != null || cellInfo instanceof CellInfoLte) {
+			return true;
+		}
+		return false;
+	}
 
 
 	public void setNetType(String netType) {
@@ -231,6 +244,11 @@ public class CellLocationEx {
 	public void setCellInfo(CellInfo cellInfo){
 		this.cellInfo = cellInfo;
 	}
+	CellInfoLte lteInfo;
+	public void setLTEInfo(CellInfoLte lteInfo){
+		this.lteInfo = lteInfo;
+	}
+
 
 	public long getCellIdTimestamp() {
 		return cellIdTimestamp;

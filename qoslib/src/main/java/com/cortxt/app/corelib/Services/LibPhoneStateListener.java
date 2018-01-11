@@ -36,6 +36,7 @@ import android.provider.Settings;
 import android.support.v4.app.NotificationCompat;
 import android.telephony.CellIdentityLte;
 import android.telephony.CellInfo;
+import android.telephony.CellInfoCdma;
 import android.telephony.CellInfoLte;
 import android.telephony.CellLocation;
 import android.telephony.CellSignalStrengthLte;
@@ -51,6 +52,7 @@ import android.util.Log;
 import com.cortxt.app.corelib.MainService;
 import com.cortxt.app.corelib.R;
 import com.cortxt.app.corelib.Services.Intents.IntentHandler;
+import com.cortxt.app.corelib.UtilsOld.CellHistory;
 import com.cortxt.app.utillib.ContentProvider.ContentValuesGenerator;
 import com.cortxt.app.utillib.ContentProvider.TablesEnum;
 import com.cortxt.app.corelib.Utils.RestCommManager;
@@ -179,8 +181,16 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			CellLocationEx cellEx = new CellLocationEx(location);
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
 				List<CellInfo> cells = telephonyManager.getAllCellInfo();
-				if (cells != null && cells.size() > 1 && cells.get(1).isRegistered() && cells.get(1) instanceof CellInfoLte)
-					cellEx.setCellInfo (cells.get(1));
+
+				if (cells != null && cells.size() > 1 && cells.get(1).isRegistered()) {
+					if (cells.get(1) instanceof CellInfoLte) {
+						cellEx.setLTEInfo((CellInfoLte)cells.get(1));
+						cellEx.setCellInfo (cells.get(0));
+					} else if (cells.get(0) instanceof CellInfoLte) {
+						cellEx.setLTEInfo((CellInfoLte)cells.get(0));
+						cellEx.setCellInfo (cells.get(1));
+					}
+				}
 				else if (cells != null && cells.size() > 0 && cells.get(0).isRegistered())
 					cellEx.setCellInfo (cells.get(0));
 			}
@@ -1514,19 +1524,20 @@ public class LibPhoneStateListener extends PhoneStateListener {
 				owner.getIntentDispatcher().updateNeighbors (neighbors);
 			}
 			//else
-			if (android.os.Build.VERSION.SDK_INT >= 10 && telephonyManager.getNetworkType() == PhoneState.NETWORK_NEWTYPE_LTE && (cellLoc.getCellLocation() instanceof GsmCellLocation) == true)
-			{
-				int cid = bsLow + (bsMid<<16);
-				int pci = ((GsmCellLocation)cellLoc.getCellLocation()).getPsc();
-				if (pci <= 0)
-				{
-					pci = cellLoc.getBSCode();
+			if (telephonyManager.getNetworkType() == PhoneState.NETWORK_NEWTYPE_LTE) {
+				if (android.os.Build.VERSION.SDK_INT >= 10 && android.os.Build.VERSION.SDK_INT < 17 && (cellLoc.getCellLocation() instanceof GsmCellLocation) == true) {
+					int cid = bsLow + (bsMid << 16);
+					int pci = ((GsmCellLocation) cellLoc.getCellLocation()).getPsc();
+					if (pci <= 0) {
+						pci = cellLoc.getBSCode();
+					}
+					neighbors = owner.getCellHistory().updateLteNeighborHistory(bsHigh, cid, pci, 0);
+					owner.getIntentDispatcher().updateLTEIdentity(neighbors);
+					owner.getReportManager().setNeighbors(neighbors);
+				} else {
+					owner.getIntentDispatcher().updateLTEIdentity(CellHistory.lastLTEIdentity);
 				}
-				neighbors = owner.getCellHistory().updateLteNeighborHistory(bsHigh,cid,pci);
-				//owner.getIntentDispatcher().updateLTEIdentity (neighbors);
-				owner.getReportManager().setNeighbors(neighbors);
 			}
-
 			Intent intent = new Intent(IntentHandler.HANDOFF);
 			owner.sendBroadcast(intent);
 		}
@@ -1917,7 +1928,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
                             int psc = 0;
                             if (android.os.Build.VERSION.SDK_INT >= 10)
                                 psc = gsmCell.getPsc();
-							String neighbors = owner.getCellHistory().updateLteNeighborHistory(bsHigh,bsLow,psc);
+							String neighbors = owner.getCellHistory().updateLteNeighborHistory(bsHigh,bsLow,psc, 0);
 							//owner.getIntentDispatcher().updateLTEIdentity (neighbors);
 							owner.getReportManager().setNeighbors(neighbors);
 						}

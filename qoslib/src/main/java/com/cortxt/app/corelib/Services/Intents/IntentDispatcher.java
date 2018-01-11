@@ -129,11 +129,11 @@ public class IntentDispatcher {
 	/**
 	 * Send the neighbor list to activities
 	 */
-//	public void updateLTEIdentity(String lte_ids){
-//		Intent intent = new Intent(CommonIntentBundleKeysOld.ACTION_NEIGHBOR_UPDATE);
-//		intent.putExtra(CommonIntentBundleKeysOld.KEY_UPDATE_LTEID, lte_ids);
-//		owner.sendBroadcast(intent);
-//	}
+	public void updateLTEIdentity(String lte_ids){
+		Intent intent = new Intent(CommonIntentBundleKeysOld.ACTION_NEIGHBOR_UPDATE);
+		intent.putExtra(CommonIntentBundleKeysOld.KEY_UPDATE_LTEID, lte_ids);
+		owner.sendBroadcast(intent);
+	}
 	
 	/**
 	 * Send the connection activity list to activities
