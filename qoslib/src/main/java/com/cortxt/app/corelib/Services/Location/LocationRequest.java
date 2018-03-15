@@ -213,7 +213,7 @@ public class LocationRequest {
 		// Use both GPS and Network location to try to get an improved location for statistics
 		// Indoors, GPS might not work, but in some locations Network might not work
 		if (bUseGPS) {
-			locListener = new GpsListenerForRequest();
+			locListener = new GpsListenerForRequest(finalAccuracy);
 			locListener.setFirstFixTimeout(gpsTimeout);//this.timeout); // using our own timeout to force gps off after
 			// timeoutSeconds
 			statsLocation = lastKnownLocation;
@@ -279,13 +279,16 @@ public class LocationRequest {
 	
 	class GpsListenerForRequest extends GpsListener {
 		//
-		public GpsListenerForRequest() {
+		public GpsListenerForRequest(float accuracy) {
+
 			super("GpsListenerForRequest");
+			this.setFinalFixAccuracy(accuracy);
 		}
+
 
 		@Override
 		public int attemptToRenewFirstFixTimeout(int numberOfSatellites) {
-			if (numberOfSatellites >= 3){
+			if (numberOfSatellites >= 4){
 				return 90000;
 			}
 			return 0;
@@ -344,7 +347,7 @@ public class LocationRequest {
 
 				//if (bLastKnownLocation == true && location.getAccuracy() < firstAccuracy && bBetterThanLastLocation)
 				{
-					setFirstFixReceived(true);
+					//setFirstFixReceived(true);
 				}
 				if (location.getAccuracy() < firstAccuracy)// && (bLiveLocation || bBetterThanLastLocation)) // We'll settle for 400 for statistics
 				{
@@ -357,13 +360,14 @@ public class LocationRequest {
 //							bLocChanged = true;
 //					}
 					bLocationChanged = bLocChanged;
-					bLastKnownLocation = false;
-					if (bLastKnownLocation == true || bLocChanged == true || location.getAccuracy() < finalAccuracy) {
+//					bLastKnownLocation = false;
+					if (bLastKnownLocation == true || bLocChanged == true || location.getAccuracy() < finalFixAccuracy) {
 						statsLocation = location;
+						//bLastKnownLocation = false;
 
-						if (finalAccuracy < firstAccuracy)
+						if (finalFixAccuracy < firstAccuracy)
 							bLocationChanged = true;
-						if (location.getAccuracy() < finalAccuracy) // && satellites > 0
+						if (location.getAccuracy() < finalFixAccuracy) // && satellites > 0
 						{
 							if (System.currentTimeMillis() - gpsStartTime > 8000 && (satellitesInFix > 3 || (System.currentTimeMillis() - gpsStartTime > 60000 && satellites < 8)))
 							{
@@ -388,6 +392,8 @@ public class LocationRequest {
 						// if (handler != null)
 						//	 handler.sendMessage(new Message ());
 						//return false;
+					} else {
+						handleLocation (false);
 					}
 
 

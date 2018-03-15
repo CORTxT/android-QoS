@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.cortxt.app.utillib.DataObjects.CellLocationEx;
 import com.cortxt.app.utillib.DataObjects.PhoneState;
+import com.cortxt.app.utillib.DataObjects.SignalEx;
 import com.cortxt.app.utillib.Utils.LoggerUtil;
 import com.cortxt.com.mmcextension.rilreader.MMCLogger;
 
@@ -134,6 +135,7 @@ public class CellHistory {
 				{
 					List<CellInfo> cells = null;
 					cells = telephonyManager.getAllCellInfo();
+
 //					if (cells != null && cells.size() > 0 && cells.get(0) instanceof CellInfoLte) // && telephonyManager.getNetworkType() == PhoneState.NETWORK_NEWTYPE_LTE)
 //					{
 //						return updateLteNeighborHistory(cells);

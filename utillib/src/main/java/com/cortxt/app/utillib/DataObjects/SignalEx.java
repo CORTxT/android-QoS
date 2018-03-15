@@ -164,6 +164,39 @@ public class SignalEx {
 		
 		return returnValue;
 	}
+
+	public static Integer getPrivate(String fieldname, Object signal){
+		Integer returnValue = null;
+		if (signal == null)
+			return null;
+		Field[] fields = null;
+		//fields = signalStrength.getClass().getDeclaredFields();
+
+
+		Field getFieldPointer = null;
+		try {
+			getFieldPointer = signal.getClass().getDeclaredField(fieldname); //NoSuchFieldException
+			getFieldPointer.setAccessible(true);
+		} catch (SecurityException e) {
+			//Log.d(TAG, "Not enough permissions to access " + fieldname);
+		} catch (NoSuchFieldException e) {
+			//Log.d(TAG, "Field does not exist - " + fieldname);
+		} catch (Exception e) {
+			//Log.d(TAG, "Field does not exist - " + fieldname);
+		}
+
+		if (getFieldPointer != null){
+			//now we're in business!
+			try {
+
+				returnValue = (Integer) getFieldPointer.getInt(signal);
+			} catch (Exception e) {
+				Log.d(TAG, "Could not get the Primary Scrambling Code", e);
+			}
+		}
+
+		return returnValue;
+	}
 	
 	public boolean isUnknown ()
 	{

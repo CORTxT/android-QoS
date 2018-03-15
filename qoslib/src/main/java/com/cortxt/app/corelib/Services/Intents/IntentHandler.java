@@ -471,7 +471,7 @@ public class IntentHandler extends BroadcastReceiver {
 			try {
 				dataMonitorStats.setScreen(false);
 				SignalEx mmcSignal = new SignalEx();
-				owner.getPhoneStateListener().processNewMMCSignal(mmcSignal);
+				owner.getPhoneStateListener().processNewMMCSignal(mmcSignal,null);
 				if (owner.getTravelDetector() != null)
 				{
 					owner.getPhoneState().screenChanged(false);

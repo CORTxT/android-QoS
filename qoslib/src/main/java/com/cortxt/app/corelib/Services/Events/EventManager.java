@@ -516,7 +516,7 @@ public class EventManager {
 				signal.setTimestamp(timestamp);
 				context.getCellHistory().lastLTECell = null;
 				context.getPhoneState().clearLastMMCSignal();  // to force a duplicate signal to be added
-				context.getPhoneStateListener().processNewMMCSignal(signal);
+				context.getPhoneStateListener().processNewMMCSignal(signal, null);
 			}
 
 			CellLocationEx cell = context.getPhoneStateListener().getLastCellLocation();

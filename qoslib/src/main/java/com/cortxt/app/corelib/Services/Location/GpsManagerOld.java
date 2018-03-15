@@ -268,6 +268,7 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 //				location.getAccuracy(),
 //				listeners
 //			));
+//			gpsStatus = locManager.getGpsStatus(null);
 			if (mNumberOfSatellitesInFix > 3 && location.getAccuracy() != 0 && location.getAccuracy() < 120)
 				location.setProvider ("gps");
 			else
@@ -281,7 +282,7 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 				boolean isAnotherLocationUpdateNeeded = listener.onLocationUpdate(location, mNumberOfSatellites, mNumberOfSatellitesInFix);
 				
 				// If location is accurate enough, consider this the first fix - this listener has new timeout
-				if (location.getAccuracy() < GpsListener.LOCATION_UPDATE_MIN_TREND_ACCURACY && listener.getOperationTimeout() > 0){
+				if (location.getAccuracy() < listener.getFinalFixAccuracy() && listener.getOperationTimeout() > 0){
 					if (!listener.isFirstFixReceived() && owner.isServiceRunning()) // cant use timer if service stopped and cancelled timer
 					{
 						listener.setFirstFixReceived(true);
@@ -399,6 +400,10 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 
 						listener.setFirstFixTimeout(listener.attemptToRenewFirstFixTimeout(getNumberOfSatellites()));	//call the onTimeout method as promised
 						listener.setFirstFixRenewalAllowed(false);	//make sure that this timer renewal is the last time it happens with this listener
+						float finalAccuracy = listener.getFinalFixAccuracy();
+						if (finalAccuracy < GpsListener.LOCATION_UPDATE_MIN_TREND_ACCURACY)
+							finalAccuracy = GpsListener.LOCATION_UPDATE_MIN_TREND_ACCURACY;
+						listener.setFinalFixAccuracy(finalAccuracy);
 						if (listener.getFirstFixTimeout() > 0 && owner.isServiceRunning()){	//if the onTimeout method returns lesser than zero, the renewal doesn't happen
 							//Log.v(TAG, "Request to renew firstFixTimeout accepted; extending timeout by " + Integer.toString(listener.getFirstFixTimeout()) + " milliseconds");
 							if (bLog)

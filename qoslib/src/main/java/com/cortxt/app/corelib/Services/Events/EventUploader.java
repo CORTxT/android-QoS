@@ -244,11 +244,16 @@ public class EventUploader implements Runnable{
 					break;
 				} else {
 					eventDataEnvelope = eventQueue.poll();
-					bFromQueue = true;
+					if (bFromQueue == false)
+						bFromQueue = true;
+					else {
+						bAddedQueue = true;
+					}
+
 				}
 			}
 			// persist the queue every 3 hrs in case something happens
-			if (event != null && (event.isCheckin || bAddedQueue))
+			if ((event != null && event.isCheckin) || bAddedQueue)
 				saveEvents(eventQueue);
 		}
 		finally

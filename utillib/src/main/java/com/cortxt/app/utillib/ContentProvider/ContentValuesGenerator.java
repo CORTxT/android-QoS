@@ -24,6 +24,10 @@ import android.telephony.CellInfoCdma;
 import android.telephony.CellInfoGsm;
 import android.telephony.CellInfoLte;
 import android.telephony.CellInfoWcdma;
+import android.telephony.CellSignalStrengthCdma;
+import android.telephony.CellSignalStrengthGsm;
+import android.telephony.CellSignalStrengthLte;
+import android.telephony.CellSignalStrengthWcdma;
 import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
@@ -148,13 +152,84 @@ public class ContentValuesGenerator {
 	 * @param stagedEventId This is the id of the event that this signal has to be related to
 	 * @return
 	 */
-	public static ContentValues generateFromSignal(SignalEx signal, int phoneType, int networkType, int serviceState, int dataState, long stagedEventId, int wifiSignal, JSONObject serviceMode){
+	public static ContentValues generateFromSignal(SignalEx signal, int phoneType, int networkType, int serviceState, int dataState,
+												   long stagedEventId, int wifiSignal, JSONObject serviceMode, List<CellInfo> cellInfos){
 		ContentValues values = new ContentValues();
 		Integer dBm = 0;
 		Integer signalDB = null;
 		try {
 			if (serviceMode != null && serviceMode.getLong("time") + 5000 < System.currentTimeMillis())
 				serviceMode = null;
+			values.put(Tables.SignalStrengths.WIFISIGNAL, wifiSignal);
+			if (signal == null || signal.getSignalStrength() == null) {
+				// If regular API fails us, lets get all this info from CellInfos API
+				if(Build.VERSION.SDK_INT >= 19) {
+					if (cellInfos != null && cellInfos.size() > 0 && cellInfos.get(0).isRegistered()) {
+						CellInfo mainCell = cellInfos.get(0);
+						LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromCellInfo", mainCell.toString());
+						values.put(Tables.SignalStrengths.SIGNAL, 0);
+						//now do the common parameters
+						long timestamp = System.currentTimeMillis();
+						if (signal != null)
+							timestamp = signal.getTimestamp();
+						values.put(Tables.SignalStrengths.TIMESTAMP, timestamp);
+						values.put(Tables.SignalStrengths.EVENT_ID, stagedEventId);
+
+						if (mainCell instanceof CellInfoLte) {
+							CellSignalStrengthLte lteSignal = ((CellInfoLte)mainCell).getCellSignalStrength();
+							LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "lteSignal = " + lteSignal.toString());
+							if (lteSignal.getDbm() > -140 && lteSignal.getDbm() < -30) {
+								values.put(Tables.SignalStrengths.SIGNAL, lteSignal.getDbm());
+								values.put(Tables.SignalStrengths.COVERAGE, 5);
+								values.put(Tables.SignalStrengths.LTE_RSRP, lteSignal.getDbm());
+
+								Integer lteRsrq = SignalEx.getPrivate("mRsrq", lteSignal);
+								Integer lteSnr = SignalEx.getPrivate("mRssnr", lteSignal);
+								if (lteRsrq > -30 && lteRsrq < -1)
+									values.put(Tables.SignalStrengths.LTE_RSRQ, lteRsrq);
+								if (lteSnr == null || lteSnr < -200 || lteSnr > 1000)
+									lteSnr = null;
+								else
+									values.put(Tables.SignalStrengths.LTE_SNR, lteSnr);
+								return values;
+							}
+						} else if (mainCell instanceof CellInfoWcdma) {
+							CellSignalStrengthWcdma wSignal = ((CellInfoWcdma)mainCell).getCellSignalStrength();
+							LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "wcdmaSignal = " + wSignal.toString());
+							if (wSignal.getDbm() > -120 && wSignal.getDbm() < -30) {
+								values.put(Tables.SignalStrengths.SIGNAL, wSignal.getDbm());
+								values.put(Tables.SignalStrengths.COVERAGE, 4);
+								return values;
+							}
+						} else if (mainCell instanceof CellInfoWcdma) {
+							CellSignalStrengthGsm gSignal = ((CellInfoGsm)mainCell).getCellSignalStrength();
+							LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "gcdmaSignal = " + gSignal.toString());
+							if (gSignal.getDbm() > -120 && gSignal.getDbm() < -30) {
+								values.put(Tables.SignalStrengths.SIGNAL, gSignal.getDbm());
+								values.put(Tables.SignalStrengths.COVERAGE, 2);
+								return values;
+							}
+						} else if (mainCell instanceof CellInfoCdma) {
+							CellSignalStrengthCdma gSignal = ((CellInfoCdma)mainCell).getCellSignalStrength();
+							LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "cdmaSignal = " + gSignal.toString());
+							if (gSignal.getEvdoDbm() > -120 && gSignal.getEvdoDbm() < -30) {
+								values.put(Tables.SignalStrengths.SIGNAL, gSignal.getEvdoDbm());
+								values.put(Tables.SignalStrengths.ECI0, gSignal.getEvdoEcio());
+								values.put(Tables.SignalStrengths.SNR, gSignal.getEvdoSnr());
+								values.put(Tables.SignalStrengths.COVERAGE, 3);
+								return values;
+							}
+							if (gSignal.getDbm() > -120 && gSignal.getDbm() < -30) {
+								values.put(Tables.SignalStrengths.SIGNAL, gSignal.getDbm());
+								values.put(Tables.SignalStrengths.ECI0, gSignal.getCdmaEcio());
+								values.put(Tables.SignalStrengths.COVERAGE, 3);
+								return values;
+							}
+						}
+
+					}
+				}
+			}
 			if (signal == null) // as a result of a service outage
 			{
 				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "signal == null");
@@ -281,8 +356,7 @@ public class ContentValuesGenerator {
 						signal.getGsmBitErrorRate() == 99 ? null : signal.getGsmBitErrorRate()
 				);
 			}
-			values.put(
-					Tables.SignalStrengths.WIFISIGNAL, wifiSignal);
+
 			// check for LTE signal signal quality parameters only if connected to LTE
 			if (networkType == TelephonyManager.NETWORK_TYPE_LTE || networkType == PhoneState.NETWORK_NEWTYPE_IWLAN)
 			{

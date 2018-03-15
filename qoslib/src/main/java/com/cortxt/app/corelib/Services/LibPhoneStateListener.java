@@ -332,7 +332,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	@Override
 	public void onDataConnectionStateChanged(int state, int networkType){
 		super.onDataConnectionStateChanged(state, networkType);
-		//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "onDataConnectionStateChanged", String.format("Network type: %d, State: %d", networkType, state));
+		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onDataConnectionStateChanged", String.format("Network type: %d, State: %d", networkType, state));
 	
 		//notify MainService of the new network type
 		mPhoneState.updateNetworkType(networkType);
@@ -377,7 +377,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		{
 			signal.setTimestamp(System.currentTimeMillis());
 			mPhoneState.clearLastMMCSignal();  // to force a duplicate signal to be added
-			processNewMMCSignal(signal);
+			processNewMMCSignal(signal, lastKnownCellInfo);
 		}
 		//this was falsely reporting outages when screen turned off, and not coupling them to regained
 		//if (datastate == TelephonyManager.DATA_DISCONNECTED)
@@ -449,8 +449,8 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	@Override
 	public void onSignalStrengthsChanged(SignalStrength signalStrength) {
 		super.onSignalStrengthsChanged(signalStrength);
-		if (DeviceInfoOld.getPlatform() != 1)  //Not an Android device
-			return;
+		//if (DeviceInfoOld.getPlatform() != 1)  //Not an Android device
+		//	return;
 
 		if (!owner.isMMCActiveOrRunning())
 		{
@@ -458,20 +458,24 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			return;
 		}
 		mPhoneState.lastKnownSignalStrength = null;
-		//if (signalStrength != null)
-		//	LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged", signalStrength.toString());
+		if (signalStrength != null)
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged", signalStrength.toString());
+		else
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged NULL", "");
+
+
 		int pref = networkPreference(owner.getApplicationContext());
 		try {
 			if (mPhoneState.previousServiceState == ServiceState.STATE_IN_SERVICE || mPhoneState.previousServiceState == ServiceState.STATE_EMERGENCY_ONLY)
 			{
 				SignalEx mmcSignal = new SignalEx(signalStrength);
-				processNewMMCSignal(mmcSignal);
+				processNewMMCSignal(mmcSignal,lastKnownCellInfo);
 				
 			}
 			else
 			{
 				SignalEx mmcSignal = new SignalEx();
-				processNewMMCSignal(mmcSignal);
+				processNewMMCSignal(mmcSignal,lastKnownCellInfo);
 			}
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
 			List<CellInfo> cells = telephonyManager.getAllCellInfo();
@@ -929,9 +933,15 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	
 	@Override
 	public void onServiceStateChanged(ServiceState serviceState) {
-		super.onServiceStateChanged(serviceState);	
-		if (serviceState == null)
+		super.onServiceStateChanged(serviceState);
+		if (serviceState == null) {
+			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onServiceStateChanged null", "");
 			return;
+		}
+		Integer dataState = SignalEx.getPrivate("mDataRegState", serviceState);
+
+		if (serviceState.getState() != 0 && dataState == 0)
+			serviceState.setState(0);
 
 		boolean isRoaming = serviceState.getRoaming();
 		String operator = serviceState.getOperatorAlphaLong();
@@ -947,8 +957,8 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onServiceStateChanged", "exception with updateConnectionHistory:", e);
 		}
 
-		//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "onServiceStateChanged", String.format("State: %s, roaming: %s, operator: %s, mccmnc: %s",
-		//			serviceState, isRoaming, operator, mccmnc));
+		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onServiceStateChanged", String.format("State: %s, roaming: %s, operator: %s, mccmnc: %s",
+					serviceState, isRoaming, operator, mccmnc));
 		//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "onServiceStateChanged", "Reflected: " + listServiceStateFields(serviceState));
 
 		boolean wasRoaming = PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.Miscellaneous.WAS_ROAMING, false);
@@ -987,7 +997,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			mPhoneState.previousServiceState = mPhoneState.SERVICE_STATE_AIRPLANE;
 			try {
 				SignalEx mmcSignal = new SignalEx();
-				processNewMMCSignal(mmcSignal);
+				processNewMMCSignal(mmcSignal,lastKnownCellInfo);;
 			} catch (Exception e) {
 			}
 			return;
@@ -1011,7 +1021,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 
 				mPhoneState.previousServiceState = serviceState.getState();
 				SignalEx signal = mPhoneState.getLastMMCSignal();
-				processNewMMCSignal(signal);
+				processNewMMCSignal(signal,lastKnownCellInfo);
 
 				// Outage needs to last longer than 5 seconds to actually trigger
 				int delay = 5000;
@@ -1043,7 +1053,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 							if (mPhoneState.previousNetworkTier >= 2)
 								owner.getEventManager().startPhoneEvent(EventType.COV_DATA_NO, EventType.COV_DATA_YES);
 							SignalEx signal = mPhoneState.getLastMMCSignal();
-						  	processNewMMCSignal(signal);
+						  	processNewMMCSignal(signal,lastKnownCellInfo);
 						    mPhoneState.previousNetworkTier = 0;
 							//previousNetworkState = 0;
 					  }
@@ -1107,7 +1117,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 					if (signal != null) {
 						signal.setTimestamp(timestamp);
 						mPhoneState.clearLastMMCSignal();  // to force a duplicate signal to be added
-						this.processNewMMCSignal(signal);
+						this.processNewMMCSignal(signal,lastKnownCellInfo);
 					}
 					if (bCellChanged == true) {
 						CellLocationEx cell = getLastCellLocation();
@@ -1554,7 +1564,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	 *  signal = null means no service / signal.getSignalStrength() = null means unknown due to screen off
 	 */
 	private long tmlastSig = 0;
-	public void processNewMMCSignal(SignalEx signal)  {
+	public void processNewMMCSignal(SignalEx signal, List<CellInfo> cellinfos)  {
 		ContentValues values = null;
 		// if in a service outage, store a null signal
 		// (I've seen cases where phone was out of service yet it was still returning a signal level)
@@ -1596,7 +1606,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			//if (signal != null) //  disabled because we do want the no-signal to be written to the signals table
 			{
 				values = ContentValuesGenerator.generateFromSignal(signal, telephonyManager.getPhoneType(), mPhoneState.getNetworkType(),
-						serviceState, telephonyManager.getDataState(), stagedEventId, wifiSignal, mPhoneState.mServicemode);
+						serviceState, telephonyManager.getDataState(), stagedEventId, wifiSignal, mPhoneState.mServicemode, cellinfos);
 				Integer valSignal= (Integer)values.get("signal");
 				if (mPhoneState.getNetworkType() == PhoneState.NETWORK_NEWTYPE_LTE) // && phoneStateListener.previousNetworkState == TelephonyManager.DATA_CONNECTED)
 					valSignal= (Integer)values.get("lteRsrp");
@@ -1792,7 +1802,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	 */
 	private long tmLastCellInfoUpdate = 0;
 	private String lastCellInfoString = "";
-	private List<Object> lastKnownCellInfo = null;
+	private List<CellInfo> lastKnownCellInfo = null;
 	
 	@TargetApi(17) @Override
 	public void onCellInfoChanged(List<CellInfo> cellinfos) {
@@ -1800,6 +1810,9 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		try {
 			if (!owner.isMMCActiveOrRunning())
 				return;
+
+			lastKnownCellInfo = cellinfos;
+
 			if (tmLastCellInfoUpdate + 60000 > System.currentTimeMillis() && cellinfos != null && cellinfos.size() > 0 && cellinfos.get(0).toString().equals(lastCellInfoString))
 				return;
 			boolean lteCell = false;

@@ -41,6 +41,7 @@ public class GpsListener {
      */
     protected String name = "";
     protected String provider = LocationManager.GPS_PROVIDER;
+    protected float finalFixAccuracy = LOCATION_UPDATE_MIN_TREND_ACCURACY;
 
     public int getFirstFixTimeout() {
         return firstFixTimeout;
@@ -48,6 +49,13 @@ public class GpsListener {
     public void setFirstFixTimeout(int firstFixTimeout) {
         this.firstFixTimeout = firstFixTimeout;
     }
+    public float getFinalFixAccuracy() {
+        return finalFixAccuracy;
+    }
+    public void setFinalFixAccuracy(float accuracy) {
+        this.finalFixAccuracy = finalFixAccuracy;
+    }
+
     public int getOperationTimeout() {
         return operationTimeout;
     }

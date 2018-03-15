@@ -38,6 +38,7 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
+import android.telephony.CellInfo;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.view.Gravity;
@@ -50,6 +51,7 @@ import com.cortxt.app.utillib.ContentProvider.ContentValuesGenerator;
 import com.cortxt.app.utillib.ContentProvider.Provider;
 import com.cortxt.app.utillib.ContentProvider.TablesEnum;
 import com.cortxt.app.utillib.DataObjects.PhoneState;
+import com.cortxt.app.utillib.DataObjects.SignalEx;
 import com.cortxt.app.utillib.ICallbacks;
 import com.cortxt.app.utillib.Reporters.ReportManager;
 import com.cortxt.app.corelib.Services.LibPhoneStateListener;
@@ -854,13 +856,13 @@ public class MainService extends Service {
 					LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "startRadioLog", "makeApplicationForeground");
 					makeApplicationForeground(true, reason);
 					// schedule to check in 5 seconds for no-events, then stop radio log
-					if (eventActiveTimer == null)
-					{
-						connectionHistory.start ();
-						eventActiveTimer = new Timer ();
-						eventActiveTask = new EventActiveTimerTask();
-						eventActiveTimer.schedule(eventActiveTask, 1000, 1000);
-					}
+//					if (eventActiveTimer == null)
+//					{
+//						connectionHistory.start ();
+//						eventActiveTimer = new Timer ();
+//						eventActiveTask = new EventActiveTimerTask();
+//						eventActiveTimer.schedule(eventActiveTask, 1000, 1000);
+//					}
 				}
 				getPhoneStateListener().processLastSignal();
 
@@ -897,24 +899,36 @@ public class MainService extends Service {
 			handler.post(new Runnable() {  
 				
                 // @Override  
-                 public void run() {  
-                	 if (!mmcActive)
-                	 {
-                		 try {
-                			 if (eventActiveTimer != null)
-                			 {
-                				 eventActiveTimer.cancel();
-                				 eventActiveTimer = null;
-                				 eventActiveTask = null;
-                			 }
-                		 }
-                		 catch (Exception e) {}
-                		 return;
-                	 }
+                 public void run() {
+					 isMMCActiveOrRunning ();
+//                	 if (!mmcActive)
+//                	 {
+//                		 try {
+//                			 if (eventActiveTimer != null)
+//                			 {
+//                				 eventActiveTimer.cancel();
+//                				 eventActiveTimer = null;
+//                				 eventActiveTask = null;
+//                			 }
+//                		 }
+//                		 catch (Exception e) {}
+//                		 return;
+//                	 }
                 	 String neighbors = cellHistory.updateNeighborHistory (null, null, null);
                 	 if (neighbors != null && neighbors.length() > 2)
                 		 intentDispatcher.updateNeighbors (neighbors);
 					 connectionHistory.updateRxTx (MainService.this);
+
+					 if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+						 if (mPhoneState.lastKnownMMCSignal == null || mPhoneState.lastKnownMMCSignal.getSignalStrength() == null) {
+							 try {
+								 List<CellInfo> cells = mPhoneState.telephonyManager.getAllCellInfo();
+								 SignalEx mmcSignal = new SignalEx();
+								 phoneStateListener.processNewMMCSignal(mmcSignal, cells);
+							 } catch (Exception e) {
+							 }
+						 }
+					 }
 
 					 int wifiSignal = -1;
 					 WifiManager wifiManager = (WifiManager)MainService.this.getSystemService(Context.WIFI_SERVICE);
@@ -936,20 +950,39 @@ public class MainService extends Service {
 	public void setEnggQueryTime ()
 	{
 		timeEngg = System.currentTimeMillis();
+		isMMCActiveOrRunning ();
 		getPhoneStateListener().processLastSignal ();
 	}
 	public boolean isMMCActiveOrRunning ()
 	{
+		boolean running = false;
 		if (mmcActive)
-			return true;
+			running = true;
 		if (timeEngg > 0 && timeEngg + 120000 > System.currentTimeMillis())
-			return true;
+			running = true;
 		if (webSocketManager.isConnected())
-			return true;
+			running = true;
 		if (mReportManager.manualTransitEvent != null || mReportManager.manualPlottingEvent != null)
-			return true;
-		timeEngg = 0;
-		return false;
+			running = true;
+
+		if (running ){
+			if (eventActiveTask == null){
+				connectionHistory.start ();
+				eventActiveTimer = new Timer ();
+				eventActiveTask = new EventActiveTimerTask();
+				eventActiveTimer.schedule(eventActiveTask, 1000, 2000);
+			}
+		}
+		else {
+			timeEngg = 0;
+			if (eventActiveTask != null){
+				if (eventActiveTimer != null)
+					eventActiveTimer.cancel ();
+				eventActiveTask = null;
+				eventActiveTimer = null;
+			}
+		}
+		return running;
 
 	}
 	public boolean isMMCActive () {
