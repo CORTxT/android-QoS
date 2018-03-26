@@ -629,6 +629,14 @@ public class ReportManager {
         return null;
     }
 
+    public String getCarrierEmail(HashMap<String, String> carrierHash) throws LibException {
+        //return mWebReporter.getTwitterHandle(carrierHash);
+        carrierCurr = getCurrentCarrier (); // carrierHash);
+        if (carrierCurr != null)
+            return carrierCurr.Email;
+        return null;
+    }
+
     public JSONArray getServerObjects(String type, HashMap<String, String> query) throws LibException {
         return mWebReporter.getServerObjects (type, query);
     }

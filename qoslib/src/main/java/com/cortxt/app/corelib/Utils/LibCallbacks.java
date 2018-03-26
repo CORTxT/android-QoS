@@ -70,7 +70,7 @@ public class LibCallbacks implements ICallbacks {
             mContext.getCellHistory().updateNeighborHistory(null, null, null);
             int lastService = mContext.getPhoneState().getLastServiceState();
             mContext.getIntentDispatcher().updateConnection(",,,," + lastService);
-            mContext.setEnggQueryTime();
+            mContext.setEnggQueryTime(1);
         }
         return lastNeighbors;
     }

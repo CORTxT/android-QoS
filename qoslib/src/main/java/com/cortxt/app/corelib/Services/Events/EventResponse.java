@@ -597,7 +597,7 @@ public class EventResponse {
             if (userChangedNotify == false)
             {
                 boolean newNotify = this.getNotifyIconSetting();
-                boolean currentNotify = PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.Miscellaneous.ICON_ALWAYS, false);
+                boolean currentNotify = PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.Miscellaneous.ICON_ALWAYS, true);
                 if (newNotify != currentNotify)
                 {
                     PreferenceManager.getDefaultSharedPreferences(owner).edit().putBoolean(PreferenceKeys.Miscellaneous.ICON_ALWAYS, newNotify).commit();

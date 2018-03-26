@@ -116,6 +116,7 @@ public class CellHistory {
 	public String updateNeighborHistory (int[] _list, int[] _list_rssi, int[] _list_chan)
 	{
 		int i;
+		int[] _list_qual = null;
 		//if (tmLastNeighborUpdate + 2000 > System.currentTimeMillis())
 		//	return "";
 		
@@ -152,6 +153,7 @@ public class CellHistory {
 						_list = new int[len];
 						_list_rssi = new int[len];
 						_list_chan = new int[len];
+						_list_qual = new int[len];
 						_type = new String[len];
 						for ( i =0; i<len; i++)
 						{ 
@@ -183,6 +185,7 @@ public class CellHistory {
 										_list[n] = cdmacell.getBasestationId();
 										_list_rssi[n] = cdmasig.getEvdoDbm();
 										_list_chan[n] = 0;
+										_list_qual[n] = cdmasig.getEvdoEcio();
 										_type[n] = "C";
 										n++;
 									}
@@ -225,6 +228,10 @@ public class CellHistory {
 									CellSignalStrengthLte ltesig = ((CellInfoLte) neighbor).getCellSignalStrength();
 									if (Build.VERSION.SDK_INT >= 24 && ltecell.getEarfcn() > 0 && ltecell.getEarfcn() < 1000000)
 										_list_chan[n] = ltecell.getEarfcn();
+
+									int rsrq = SignalEx.getPrivate("mRsrq", ltesig);
+									if (rsrq < -1)
+										_list_qual[n] = rsrq;
 									if (ltecell.getPci() > 0 && ltecell.getPci() < 1000) {
 										_list[n] = ltecell.getPci();
 										_list_rssi[n] = ltesig.getDbm();
@@ -353,15 +360,23 @@ public class CellHistory {
 				{
 					if (_list[i] != 0 && !_type[i].contains("*"))
 					{
+						String sig = String.valueOf(_list_rssi[i]);
 						CellidSample smp = new CellidSample(_type[i], _list[i], _list_rssi[i]);
 						if (_list_chan != null && _list_chan[i] != 0) {
 							smp.val4 = _list_chan[i];
 						}
+						if (_list_qual != null && _list_qual[i] < -1) {
+							smp.val3 = _list_qual[i];
+							sig += "/" + _list_qual[i];
+						} else
+							sig += "/0";
+
+
 						// Update Neighbor list history a maximum of once per 2 seconds
 						neighbor_history.add (smp);
 						stringNeighboring = stringNeighboring
 						         + String.valueOf(_list[i]&0xFFFF) +"@"
-						         + _list_rssi[i] +",";
+						         + sig + ",";
 						
 					}
 				}
@@ -659,6 +674,7 @@ public class CellHistory {
 			txt += "," + sample.val4;
 		else
 			txt += ",0";
+
 		sample.sent = 1;
 		
 		return txt;

@@ -104,6 +104,14 @@ public class Carrier implements Serializable, Comparable<Carrier> {
 	            Path = jobj.getString ("Path");
 	            OperatorId = jobj.getString ("Operator");
         	}
+			if ("null".equals(Email))
+				Email = null;
+			if ("null".equals(Facebook))
+				Facebook = null;
+			if ("null".equals(Twitter))
+				Twitter = null;
+			if ("null".equals(Path))
+				Path = null;
         }
         catch (Exception e)
         {

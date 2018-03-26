@@ -947,9 +947,11 @@ public class MainService extends Service {
 	}
 	private int lastKnownWifiSignal;
 	private long timeEngg = 0;
-	public void setEnggQueryTime ()
+	public void setEnggQueryTime (int viewingNow)
 	{
 		timeEngg = System.currentTimeMillis();
+		if (viewingNow == 0)
+			timeEngg = 0;
 		isMMCActiveOrRunning ();
 		getPhoneStateListener().processLastSignal ();
 	}
@@ -980,6 +982,7 @@ public class MainService extends Service {
 					eventActiveTimer.cancel ();
 				eventActiveTask = null;
 				eventActiveTimer = null;
+				makeApplicationForeground(false, null);
 			}
 		}
 		return running;
@@ -1554,8 +1557,11 @@ public class MainService extends Service {
 								.setContentIntent(pendingIntent);
 				notificationManager.notify(4159, bBuilder.build());
 			}
-			else
+			else {
 				this.stopForeground(true);
+				NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+				notificationManager.cancel(4159);
+			}
 		}
 
 	}

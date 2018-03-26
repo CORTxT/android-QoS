@@ -234,6 +234,7 @@ public class IntentHandler extends BroadcastReceiver {
 	public static final String SURVEY = "com.cortxt.app.MMC.Services.Intents.MMCIntentHandler.SURVEY";
 	public static final String SURVEY_EXTRA = "survey_extra";
 	public static final String VIEWING_SIGNAL = "com.cortxt.app.MMC.intent.action.VIEWING_SIGNAL";
+	public static final String VIEWING_SIGNAL_NOW = "viewing_now_extra";
 	public static final String MANUAL_TRANSIT_START = "com.cortxt.app.MMC.intent.action.MANUAL_TRANSIT_START";
 	public static final String MANUAL_TRANSIT_END = "com.cortxt.app.MMC.intent.action.MANUAL_TRANSIT_END";
 	public static final String MANUAL_TRANSIT_CANCEL = "com.cortxt.app.MMC.intent.action.MANUAL_TRANSIT_CANCEL";
@@ -706,8 +707,11 @@ public class IntentHandler extends BroadcastReceiver {
          	}
          	handleCommands(msgBody, true, 0);
 		}
-		else if(action.equals(VIEWING_SIGNAL)) {  
-			owner.setEnggQueryTime();
+		else if(action.equals(VIEWING_SIGNAL)) {
+			int viewingNow = 1;
+			if (intentExtras != null && intentExtras.containsKey(VIEWING_SIGNAL_NOW))
+				viewingNow = intentExtras.getInt(VIEWING_SIGNAL_NOW);
+			owner.setEnggQueryTime(viewingNow);
 		}
 		else if(intent.getAction().equals(SURVEY)) {
 			if (intentExtras == null) 

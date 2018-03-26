@@ -116,12 +116,15 @@ public class IntentDispatcher {
 		Intent intent = new Intent(CommonIntentBundleKeysOld.ACTION_NEIGHBOR_UPDATE);
 		// Split neighborlist twice and build an array
 		String[] parts = sneighbors.split(",");
-		int[] neighbors = new int[parts.length*2];
+		int[] neighbors = new int[parts.length*3];
 		int i =0;
 		try{
 		for (String part: sneighbors.split(","))
-			for (String part2: part.split("@"))
-				neighbors[i++] = Integer.parseInt(part2);
+			for (String part2: part.split("@")) {
+				for (String part3: part2.split("/")) {
+					neighbors[i++] = Integer.parseInt(part3);
+				}
+			}
 		} catch (Exception e) {}
 		intent.putExtra(CommonIntentBundleKeysOld.KEY_UPDATE_NEIGHBORS, neighbors);
 		owner.sendBroadcast(intent);

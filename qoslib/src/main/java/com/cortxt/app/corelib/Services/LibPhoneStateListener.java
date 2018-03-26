@@ -457,6 +457,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			mPhoneState.lastKnownSignalStrength = signalStrength;
 			return;
 		}
+		//signalStrength = null;
 		mPhoneState.lastKnownSignalStrength = null;
 		if (signalStrength != null)
 			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged", signalStrength.toString());

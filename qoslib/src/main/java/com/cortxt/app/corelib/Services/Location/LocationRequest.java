@@ -298,7 +298,7 @@ public class LocationRequest {
 		 */
 		@Override
 		public void onTimeout() {
-			if (bFinalLocation == true)
+			if (bFinalLocation == true || bGPSRunning == false)
 				return;
 			bGPSTimeout = true;
 			bGPSRunning = false;
@@ -361,13 +361,13 @@ public class LocationRequest {
 //					}
 					bLocationChanged = bLocChanged;
 //					bLastKnownLocation = false;
-					if (bLastKnownLocation == true || bLocChanged == true || location.getAccuracy() < finalFixAccuracy) {
+					if (bLastKnownLocation == true || bLocChanged == true || location.getAccuracy() <= finalAccuracy) {
 						statsLocation = location;
 						//bLastKnownLocation = false;
 
-						if (finalFixAccuracy < firstAccuracy)
+						if (finalAccuracy < firstAccuracy)
 							bLocationChanged = true;
-						if (location.getAccuracy() < finalFixAccuracy) // && satellites > 0
+						if (location.getAccuracy() <= finalAccuracy) // && satellites > 0
 						{
 							if (System.currentTimeMillis() - gpsStartTime > 8000 && (satellitesInFix > 3 || (System.currentTimeMillis() - gpsStartTime > 60000 && satellites < 8)))
 							{
