@@ -35,6 +35,7 @@ public interface ICallbacks{
     void setAlarmManager ();
     void manageDataMonitor (int setting, Integer appscan_seconds);
     void updateTravelPreference ();
+    void setTravelling (boolean isTravelling);
     void queueActiveTest(EventType evType, int trigger);
     void setActiveTestComplete(EventType testType);
     void localReportEvent (EventObj itestEvent);

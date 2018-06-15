@@ -719,7 +719,7 @@ public class MainService extends Service {
 	/*
 	 * set last location
 	 */
-	public void setLastLocation (Location location) 
+	public void setLastLocation (Location location)
 	{
 		lastLocation = location;
 	}
@@ -758,6 +758,12 @@ public class MainService extends Service {
 			return false;
 	}
 
+	public void setTravelling (boolean isTravelling)
+	{
+		if (getTravelDetector() != null)
+			getTravelDetector().setTravelling(isTravelling);
+	}
+
 	public Provider getDBProvider () //getContentResolver()
 	{
 		return mReportManager.getDBProvider();
@@ -776,39 +782,44 @@ public class MainService extends Service {
 		//push the new location into the database
 		// Only store locations that have changed by more than 0.0001 degrees (about 10 meters)
 		// This is so a new sample is only added to an event if the location changed significantly
-		if (location != null && lastLocation != null) // && lastEventId == stagedEventId)
-	    {
-			if (location.getLongitude() == 0.0 && location.getLatitude() == 0.0)
-				return;
-			lastLocation = location;  // this was causing small location increments not to be recorded
-			// dont store the same location twice
-	    	if (Math.abs(lastSavedLocation.getLatitude() - location.getLatitude()) < 0.00005 &&
-	    			Math.abs(lastSavedLocation.getLongitude() - location.getLongitude()) < 0.00005 &&
-	    			Math.abs(lastSavedLocation.getAccuracy() - location.getAccuracy()) < 8) {
-				//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "SAME Location", "lat=" + location.getLatitude() + ", lng: " + location.getLongitude());
-				return;
+		try {
+			if (location != null && lastLocation != null && lastSavedLocation != null) // && lastEventId == stagedEventId)
+			{
+				if (location.getLongitude() == 0.0 && location.getLatitude() == 0.0)
+					return;
+				lastLocation = location;  // this was causing small location increments not to be recorded
+				// dont store the same location twice
+				if (Math.abs(lastSavedLocation.getLatitude() - location.getLatitude()) < 0.00005 &&
+						Math.abs(lastSavedLocation.getLongitude() - location.getLongitude()) < 0.00005 &&
+						Math.abs(lastSavedLocation.getAccuracy() - location.getAccuracy()) < 8) {
+					//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "SAME Location", "lat=" + location.getLatitude() + ", lng: " + location.getLongitude());
+					return;
+				}
+
+
+				// mark event as inaccurate if there was a large jump
+				if ((Math.abs(lastLocation.getLatitude() - location.getLatitude()) > 0.0014 ||
+						Math.abs(lastLocation.getLongitude() - location.getLongitude()) > 0.0014) &&
+						location.getAccuracy() < 50)
+					location.setAccuracy(location.getAccuracy() + 80);
 			}
+			if (location == null) {
+				location = MainService.getLastLocation();
+				if (location == null || location.getTime() + 60000 < System.currentTimeMillis())
+					location = null;
+			}
+			//else
+			//	LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "Stored Location", "lat=" + location.getLatitude() + ", lng: " + location.getLongitude());
 
-
-	    	// mark event as inaccurate if there was a large jump
-	    	if ((Math.abs(lastLocation.getLatitude() - location.getLatitude()) > 0.0014 ||
-	    			Math.abs(lastLocation.getLongitude() - location.getLongitude()) > 0.0014) &&
-	    			location.getAccuracy() < 50)
-	    		location.setAccuracy(location.getAccuracy() + 80);
-	    }
-		if (location == null)
-		{
-			location = MainService.getLastLocation();
-			if (location == null || location.getTime() + 60000 < System.currentTimeMillis())
-				location = null;
+			lastSavedLocation = location;
+			location.setTime(System.currentTimeMillis());
+			ContentValues values = ContentValuesGenerator.generateFromLocation(location, 0, satellites);
+			getDBProvider(this).insert(TablesEnum.LOCATIONS.getContentUri(), values);
 		}
-		//else
-		//	LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "Stored Location", "lat=" + location.getLatitude() + ", lng: " + location.getLongitude());
+		catch (Exception e) {
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "processNewFilteredLocation", "exception", e);
 
-		lastSavedLocation = location;
-		location.setTime(System.currentTimeMillis());
-		ContentValues values = ContentValuesGenerator.generateFromLocation(location, 0, satellites);
-		getDBProvider(this).insert(TablesEnum.LOCATIONS.getContentUri(), values);
+		}
 	}
 	
 	public ReportManager getReportManager ()
@@ -832,7 +843,7 @@ public class MainService extends Service {
 						boolean useServiceMode = false;
 						if (allowSvc == true) {
 							boolean svcmodeActive = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("KEY_SETTINGS_SVCMODE", false);
-
+							svcmodeActive = true;
 							if (svcmodeActive)
 								useServiceMode = true;
 						}
@@ -1370,7 +1381,7 @@ public class MainService extends Service {
 	{
 		if (getTravelDetector() == null)
 			return false;
-		if (getTravelDetector().isTravelling() || getTravelDetector().isConfirmed())
+		if (getTravelDetector().isTravelling())  // || getTravelDetector().isConfirmed())
 			return true;
 		return false;
 	}

@@ -459,10 +459,10 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		}
 		//signalStrength = null;
 		mPhoneState.lastKnownSignalStrength = null;
-		if (signalStrength != null)
-			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged", signalStrength.toString());
-		else
-			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged NULL", "");
+//		if (signalStrength != null)
+//			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged", signalStrength.toString());
+//		else
+//			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged NULL", "");
 
 
 		int pref = networkPreference(owner.getApplicationContext());
@@ -958,9 +958,8 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onServiceStateChanged", "exception with updateConnectionHistory:", e);
 		}
 
-		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onServiceStateChanged", String.format("State: %s, roaming: %s, operator: %s, mccmnc: %s",
-					serviceState, isRoaming, operator, mccmnc));
-		//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "onServiceStateChanged", "Reflected: " + listServiceStateFields(serviceState));
+//		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onServiceStateChanged", String.format("State: %s, roaming: %s, operator: %s, mccmnc: %s",
+//					serviceState, isRoaming, operator, mccmnc));
 
 		boolean wasRoaming = PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.Miscellaneous.WAS_ROAMING, false);
 		
@@ -1501,7 +1500,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			CellLocation lastCellloc = null;
 			if (mPhoneState.lastKnownMMCCellLocation != null)
 				lastCellloc = mPhoneState.lastKnownMMCCellLocation.getCellLocation();
-			owner.getTravelDetector().detectTravellingFromCellId(mPhoneState.getPhoneType(), cellLoc.getCellLocation(), lastCellloc, mPhoneState);
+			//owner.getTravelDetector().detectTravellingFromCellId(mPhoneState.getPhoneType(), cellLoc.getCellLocation(), lastCellloc, mPhoneState);
 			//store the new cell location in the internal cache
 			mPhoneState.lastKnownMMCCellLocation = cellLoc;
 		}

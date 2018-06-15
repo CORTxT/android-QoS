@@ -355,6 +355,10 @@ public class QosAPI {
         return true;
     }
 
+    public static boolean isTravelling () {
+        return Global.isTravelling();
+    }
+
     /**
      * Cause the service to close and restart itself
      * You can do this when your App is finished, just as it closes

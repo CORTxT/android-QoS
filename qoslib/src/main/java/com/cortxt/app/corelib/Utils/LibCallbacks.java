@@ -114,6 +114,10 @@ public class LibCallbacks implements ICallbacks {
     {
         mContext.updateTravelPreference();
     }
+    public void setTravelling (boolean isTravelling)
+    {
+        mContext.setTravelling(isTravelling);
+    }
     public void queueActiveTest(EventType eventType, int trigger) {
         mContext.getEventManager().queueActiveTest(eventType, trigger);
     }

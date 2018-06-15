@@ -93,6 +93,7 @@ public final class CommonIntentBundleKeysOld {
 	public static final String ACTION_RX_TX = "com.cortxt.app.MMC.Activities.Livestatus.ACTION_RX_TX";
 	public static final String ACTION_NETWORK_UPDATE = "com.cortxt.app.MMC.ACTION_NETWORK_UPDATE";
 	public static final String ACTION_GMLC_STATUS_UPDATE = "com.cortxt.app.MMC.UPDATE_GMLC_STATUS";
+	public static final String ACTION_TRAVEL_DETECT = "com.cortxt.app.MMC.ACTION_TRAVEL_DETECT";
 
 	public static final String EXTRA_STALLS = "stalls";
 	public static final String EXTRA_STALL_TIME = "stallTime";
@@ -139,6 +140,7 @@ public final class CommonIntentBundleKeysOld {
 	public static final String KEY_EXTRA_VQ_SCORE = "KEY_EXTRA_VQ_SCORE";
 	public static final String KEY_EXTRA_VQ_LEVEL = "KEY_EXTRA_VQ_LEVEL";
 	public static final String KEY_EXTRA_VQ_CONNECT_ERROR = "KEY_EXTRA_VQ_CONNECT_ERROR";
+	public static final String KEY_EXTRA_TRAVELLING = "EXTRA_TRAVELLING";
 }
 
 

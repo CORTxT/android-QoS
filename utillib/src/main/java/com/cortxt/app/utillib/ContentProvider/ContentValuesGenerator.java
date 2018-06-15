@@ -166,7 +166,7 @@ public class ContentValuesGenerator {
 				if(Build.VERSION.SDK_INT >= 19) {
 					if (cellInfos != null && cellInfos.size() > 0 && cellInfos.get(0).isRegistered()) {
 						CellInfo mainCell = cellInfos.get(0);
-						LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromCellInfo", mainCell.toString());
+						//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromCellInfo", mainCell.toString());
 						values.put(Tables.SignalStrengths.SIGNAL, 0);
 						//now do the common parameters
 						long timestamp = System.currentTimeMillis();
@@ -177,7 +177,7 @@ public class ContentValuesGenerator {
 
 						if (mainCell instanceof CellInfoLte) {
 							CellSignalStrengthLte lteSignal = ((CellInfoLte)mainCell).getCellSignalStrength();
-							LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "lteSignal = " + lteSignal.toString());
+							//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "lteSignal = " + lteSignal.toString());
 							if (lteSignal.getDbm() > -140 && lteSignal.getDbm() < -30) {
 								values.put(Tables.SignalStrengths.SIGNAL, lteSignal.getDbm());
 								values.put(Tables.SignalStrengths.COVERAGE, 5);
@@ -195,7 +195,7 @@ public class ContentValuesGenerator {
 							}
 						} else if (mainCell instanceof CellInfoWcdma) {
 							CellSignalStrengthWcdma wSignal = ((CellInfoWcdma)mainCell).getCellSignalStrength();
-							LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "wcdmaSignal = " + wSignal.toString());
+							//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "wcdmaSignal = " + wSignal.toString());
 							if (wSignal.getDbm() > -120 && wSignal.getDbm() < -30) {
 								values.put(Tables.SignalStrengths.SIGNAL, wSignal.getDbm());
 								values.put(Tables.SignalStrengths.COVERAGE, 4);
@@ -203,7 +203,7 @@ public class ContentValuesGenerator {
 							}
 						} else if (mainCell instanceof CellInfoWcdma) {
 							CellSignalStrengthGsm gSignal = ((CellInfoGsm)mainCell).getCellSignalStrength();
-							LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "gcdmaSignal = " + gSignal.toString());
+							//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "gcdmaSignal = " + gSignal.toString());
 							if (gSignal.getDbm() > -120 && gSignal.getDbm() < -30) {
 								values.put(Tables.SignalStrengths.SIGNAL, gSignal.getDbm());
 								values.put(Tables.SignalStrengths.COVERAGE, 2);
@@ -211,7 +211,7 @@ public class ContentValuesGenerator {
 							}
 						} else if (mainCell instanceof CellInfoCdma) {
 							CellSignalStrengthCdma gSignal = ((CellInfoCdma)mainCell).getCellSignalStrength();
-							LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "cdmaSignal = " + gSignal.toString());
+							//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "cdmaSignal = " + gSignal.toString());
 							if (gSignal.getEvdoDbm() > -120 && gSignal.getEvdoDbm() < -30) {
 								values.put(Tables.SignalStrengths.SIGNAL, gSignal.getEvdoDbm());
 								values.put(Tables.SignalStrengths.ECI0, gSignal.getEvdoEcio());
@@ -232,7 +232,7 @@ public class ContentValuesGenerator {
 			}
 			if (signal == null) // as a result of a service outage
 			{
-				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "signal == null");
+				//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "signal == null");
 				values.put(Tables.SignalStrengths.SIGNAL, -256);
 				//now do the common parameters
 				values.put(Tables.SignalStrengths.TIMESTAMP, System.currentTimeMillis());
@@ -522,7 +522,7 @@ public class ContentValuesGenerator {
 						}
 						catch (Exception e)
 						{
-							LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "", "listSignalFields", "exception", e);
+							//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "", "listSignalFields", "exception", e);
 						}
 					}
 				}

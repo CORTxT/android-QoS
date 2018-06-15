@@ -259,6 +259,13 @@ public class Global {
         return null;
     }
 
+    public static void setTravelling (boolean isTravelling) {
+        if (callbacks != null)
+        {
+            callbacks.setTravelling(isTravelling);
+        }
+    }
+
     public static int getAppImportance(String packageName, Context context) {
         ActivityManager manager = (ActivityManager) context.getSystemService(Service.ACTIVITY_SERVICE);
         List<ActivityManager.RunningAppProcessInfo> runningProcesses = manager.getRunningAppProcesses();

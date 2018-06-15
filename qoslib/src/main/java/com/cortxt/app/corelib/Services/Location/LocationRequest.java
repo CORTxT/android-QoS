@@ -298,7 +298,7 @@ public class LocationRequest {
 		 */
 		@Override
 		public void onTimeout() {
-			if (bFinalLocation == true || bGPSRunning == false)
+			if (bFinalLocation == true) // || bGPSRunning == false)
 				return;
 			bGPSTimeout = true;
 			bGPSRunning = false;

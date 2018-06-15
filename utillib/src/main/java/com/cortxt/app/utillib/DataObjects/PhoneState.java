@@ -373,12 +373,12 @@ public class PhoneState {
             Method mI = c.getDeclaredMethod("getVoiceNetworkType");
             mI.setAccessible(true);
             int voiceTech = (Integer)mI.invoke(telephonyManager);
-            LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "getVoiceNetworkType", "Voice Network = " + voiceTech);
+            //LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "getVoiceNetworkType", "Voice Network = " + voiceTech);
 
             Method mI2 = c.getDeclaredMethod("getDataNetworkType");
             mI2.setAccessible(true);
             int dataTech = (Integer)mI2.invoke(telephonyManager);
-            LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "getDataNetworkType", "Data Network = " + dataTech);
+            //LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "getDataNetworkType", "Data Network = " + dataTech);
 
 
             return voiceTech;
