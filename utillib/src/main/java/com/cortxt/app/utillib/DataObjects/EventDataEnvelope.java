@@ -91,6 +91,12 @@ public class EventDataEnvelope {
 	public void setHandset(String handset) {
 		oCallData.handset = handset;
 	}
+	public String getIMSI() {
+		return oCallData.IMSI;
+	}
+	public void setIMSI(String imsi) {
+		oCallData.IMSI = imsi;
+	}
 	
 	public long getlStartTime() {
 		return oCallData.lStartTime;
@@ -258,8 +264,7 @@ class OCallData{
 		this.mnc = _mnc;
 		this.IMSI = _imsi;
 		this.apiKey = _apikey;
-		
-		
+
 	}
 	
 	public OCallData() {

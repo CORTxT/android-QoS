@@ -27,6 +27,7 @@ import com.cortxt.app.corelib.R;
 import com.cortxt.app.utillib.ContentProvider.Tables;
 import com.cortxt.app.utillib.ContentProvider.UriMatch;
 import com.cortxt.app.utillib.CoverageSamples.CoverageSamplesSend;
+import com.cortxt.app.utillib.DataObjects.Carrier;
 import com.cortxt.app.utillib.DataObjects.PhoneState;
 import com.cortxt.app.utillib.Reporters.ReportManager;
 import com.cortxt.app.utillib.Reporters.ReportManager.EventKeys;
@@ -847,6 +848,10 @@ public class EventUploader implements Runnable{
 				apikey,
 				eventDataList
 			);
+
+			if (Carrier.isEU(owner))  // We wont send IMSI with European Union countries
+				eventDataEnvelope.setIMSI("");
+
 			return eventDataEnvelope;
 		}
 	    catch (Exception ex){

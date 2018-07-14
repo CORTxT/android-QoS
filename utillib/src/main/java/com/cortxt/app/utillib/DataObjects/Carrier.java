@@ -13,6 +13,7 @@ import org.json.JSONObject;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.telephony.TelephonyManager;
 
 import com.cortxt.app.utillib.Utils.Global;
 import com.cortxt.app.utillib.Utils.LoggerUtil;
@@ -187,6 +188,19 @@ public class Carrier implements Serializable, Comparable<Carrier> {
 	public int compareTo(Carrier another) {
 		// TODO Auto-generated method stub
 		return this.Name.compareTo(another.Name);
+	}
+
+	public static boolean isEU (Context context) {
+		TelephonyManager telephonyManager;
+		try {
+			telephonyManager = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
+			String ccode = telephonyManager.getNetworkCountryIso();
+			String euCcodes = "AT,BE,BG,HR,CY,CZ,DK,EE,FI,FR,DE,GR,HU,IE,IT,LV,LT,LU,MT,NL,PL,PT,RO,SK,SI,ES,SE,GB";
+			if (ccode != null && euCcodes.indexOf(ccode.toUpperCase()) >= 0)
+				return true;
+		} catch (Exception e) {
+		}
+		return false;
 	}
     
 }
