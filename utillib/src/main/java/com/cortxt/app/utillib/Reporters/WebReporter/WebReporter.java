@@ -751,6 +751,7 @@ public class WebReporter  {
 			BufferedReader br = null;
 			msg += connection.getURL().toString();
 
+			InputStreamReader sr;
 			boolean error = false;
 			try {
 				 br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
@@ -765,20 +766,27 @@ public class WebReporter  {
 					LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "readString getErrorStream", "exception", e2);
 				}
 			}
-			StringBuilder sb = new StringBuilder();
-			String line;
-			while ((line = br.readLine()) != null) {
-				sb.append(line+"\n");
-			}
-			br.close();
-			String str = sb.toString();
-			if (error)
-			{
-				LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "readString ", "error " + str);
-				return str;
-			}
-			return str;
+			if (br != null) {
+				try {
+					StringBuilder sb = new StringBuilder();
+					String line;
+					while ((line = br.readLine()) != null) {
+						sb.append(line + "\n");
+					}
 
+					String str = sb.toString();
+					if (error) {
+						LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "readString ", "error " + str);
+						return str;
+					}
+					return str;
+				} catch (Exception e2) {
+					LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "readString readLine", "exception", e2);
+				} finally {
+					br.close();
+				}
+			}
+			return null;
 		}
 		catch (Exception ex) {
 			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "readString ", "exception", ex);

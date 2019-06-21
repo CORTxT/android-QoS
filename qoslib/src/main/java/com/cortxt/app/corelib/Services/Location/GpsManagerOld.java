@@ -273,7 +273,8 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 				location.setProvider ("gps");
 			else
 				location.setProvider ("network");
-			owner.getIntentDispatcher().updateLocation(location);
+			if (owner != null && owner.getIntentDispatcher() != null)
+				owner.getIntentDispatcher().updateLocation(location);
 			owner.processNewFilteredLocation(location, mNumberOfSatellites);
 			for (int i=0; i<listeners.size(); i++) {
 				GpsListener listener = listeners.get(i);
@@ -524,7 +525,7 @@ public class GpsManagerOld implements GpsStatus.Listener, LocationListener {
 		synchronized(GpsManagerOld.this) {
 			//add timer task for a first fix
 			int delay = listener.getFirstFixTimeout();
-			if (delay <= 60000)
+			if (delay <= 60000 && delay >= 0)
 				delay = 60000;
 			final boolean neededLooper;
 

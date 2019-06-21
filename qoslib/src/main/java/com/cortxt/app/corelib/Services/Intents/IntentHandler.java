@@ -684,28 +684,29 @@ public class IntentHandler extends BroadcastReceiver {
 //			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onReceived SMS_REJECTED", intentExtras.toString());
 //		}
 		else if(intent.getAction().equals(SMS_RECEIVED)) {
-			SmsMessage[] msgs = null;
-//			String msg_from;
-			if (intentExtras == null) 
-				return;
+			try {
+				SmsMessage[] msgs = null;
+				//			String msg_from;
+				if (intentExtras == null)
+					return;
 
-			Object[] pdus = (Object[]) intentExtras.get("pdus");
-        	msgs = new SmsMessage[pdus.length];
-        	String[] msgBody = new String[msgs.length];
-         	for(int i=0; i < msgs.length; i++) {
-	        	msgs[i] = SmsMessage.createFromPdu((byte[])pdus[i]);
-	//            msg_from = msgs[i].getOriginatingAddress();
-				String msg = msgs[i].getMessageBody().trim();
-				if (msg.length()> 10)
-				{
-					msg = msg.substring(1,msg.length()-1);
-					msg = "{" + msg + "}";
+				Object[] pdus = (Object[]) intentExtras.get("pdus");
+				msgs = new SmsMessage[pdus.length];
+				String[] msgBody = new String[msgs.length];
+				for (int i = 0; i < msgs.length; i++) {
+					msgs[i] = SmsMessage.createFromPdu((byte[]) pdus[i]);
+					//            msg_from = msgs[i].getOriginatingAddress();
+					String msg = msgs[i].getMessageBody().trim();
+					if (msg.length() > 10) {
+						msg = msg.substring(1, msg.length() - 1);
+						msg = "{" + msg + "}";
+					}
+
+					msgBody[i] = msg;
+
 				}
-
-	         	msgBody[i] = msg;
-	         	
-         	}
-         	handleCommands(msgBody, true, 0);
+				handleCommands(msgBody, true, 0);
+			} catch (Exception e){}
 		}
 		else if(action.equals(VIEWING_SIGNAL)) {
 			int viewingNow = 1;

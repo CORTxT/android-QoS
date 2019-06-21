@@ -7,7 +7,6 @@ import com.cortxt.app.utillib.DataObjects.CellLocationEx;
 import com.cortxt.app.utillib.DataObjects.PhoneState;
 import com.cortxt.app.utillib.DataObjects.SignalEx;
 import com.cortxt.app.utillib.Utils.LoggerUtil;
-import com.cortxt.com.mmcextension.rilreader.MMCLogger;
 
 import android.annotation.TargetApi;
 import android.os.Build;
@@ -302,7 +301,7 @@ public class CellHistory {
 				}
 				catch (Exception e)
 				{
-					MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "updateNeighborHistory", "inner exception", e);
+					LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "updateNeighborHistory", "inner exception", e);
 				}}
 				if (_list == null)
 				{
@@ -385,13 +384,13 @@ public class CellHistory {
 					return null;
 				lastCellString = stringNeighboring;
 				//if (neighboringList.size() > 0)
-				MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "updateNeighborHistory", stringNeighboring);
+				//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "updateNeighborHistory", stringNeighboring);
 			     
 				return stringNeighboring;
 			}
 			catch (Exception e)
 			{
-				MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "updateNeighborHistory", "exception", e);
+				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "updateNeighborHistory", "exception", e);
 				return "";
 			}
 			finally 

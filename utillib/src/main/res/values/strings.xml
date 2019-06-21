@@ -3,8 +3,8 @@
     <string name="alt_app_label"></string>
     <string name="app_name">com.cortxt.app.MMC.MMCApplication</string>
     <string name="app_firebase_code">p7xn6</string>
-    <string name="MMC_URL_WIN">http://mymobilecoverage.com/</string>
-    <string name="MMC_URL_CLOUD">http://d1l72qawknwf5q.cloudfront.net</string>
+    <string name="MMC_URL_WIN">https://mymobilecoverage.com/</string>
+    <string name="MMC_URL_CLOUD">https://d1l72qawknwf5q.cloudfront.net</string>
     <string name="progress_step1of3">Step 1 of 3</string>
     <string name="progress_step2of3">Step 2 of 3</string>
     <string name="progress_step3of3">Step 3 of 3</string>
@@ -117,7 +117,6 @@
     <string name="getstarted_acceptterms">Accept terms and conditions</string>
     <string name="getstarted_mustacceptterms">In order to use MyMobileCoverage, you must agree to the terms and conditions</string>
     <string name="getstarted_privacy_message">MyMobileCoverage respects your privacy and will share your coverage data only with your wireless provider. Your personal data will not be shared with any third party.</string>
-    <string name="getstarted_policy_links">See our &lt;a href="http://www.mymobilecoverage.com/docs/privacypolicy.htm"&gt; privacy policy &lt;"/a&gt; or &lt;a href="http://www.mymobilecoverage.com/docs/tos.htm"&gt; terms of use &lt;/a&gt;</string>
     <string name="getstarted_dialog_title">Registering</string>
     <string name="getstarted_dialog_message">Please wait</string>
     <string name="getstarted_register_error">Sorry, an error occurred during registration</string>
@@ -661,12 +660,6 @@
     <string name="GPS_Disabled_Message">GPS, Wi-Fi &amp; Network location should be enabled for best results. Would you like to enable them?</string>
     <string name="Q10_Bar">Swipe Down to Hide Bar</string>
     <string name="Q10_Bar_Message">To hide the bottom bar, please swipe the screen from top to bottom. This will provide more room for this application.</string>
-    <string name="BB10_Install">Install and run 2nd App</string>
-    <string name="BB10_Install_Message">
-<![CDATA[
-			To detect coverage, a 2nd App called \'MyMobileCoverage 1 of 2\' also needs to be installed and running. <a href="http://appworld.blackberry.com/webstore">Install MyMobileCoverage 1 of 2</a>
-		]]>
-    </string>
 
     <!-- Generic Labels -->
     <string name="GenericLabel_Latitude">Latitude: </string>
@@ -841,22 +834,6 @@
     <string name="SpeedTest_InProgress">Test in progress</string>
     <string name="SpeedTest_TestAgain">Test again</string>
     <string name="WebSiteLink_Help_Title">Help</string>
-    <string name="WebsiteLink_CoverageHelp_Url">http://www.mymobilecoverage.com/client/help/mystats.htm#coverage</string>
-    <string name="WebsiteLink_TermsAndConditions_Url">http://www.mymobilecoverage.com/docs/tos.htm</string>
-    <string name="WebsiteLink_GettingStarted_Url">http://www.mymobilecoverage.com/client/android/2.0/gettingstarted.html</string>
-    <string name="WebsiteLink_Help_Url">http://www.mymobilecoverage.com/client/android/help/mmcandroidhelp.htm</string>
-    <string name="WebsiteLink_PrivacyPolicy_Url">http://www.mymobilecoverage.com/docs/privacypolicy.htm</string>
-    <string name="WebsiteLink_SettingsOptionsHelp_Url">http://www.mymobilecoverage.com/client/help/settings.htm#monitoroptions</string>
-    <string name="WebsiteLink_WifiHelp_Url">http://www.mymobilecoverage.com/client/help/wifisetup.htm</string>
-    <string name="WebsiteLink_GpsTips_Url">http://www.mymobilecoverage.com/client/help/gps_tips.htm</string>
-    <string name="WebsiteLink_LivestatusHelp_Url">http://www.mymobilecoverage.com/client/help/livestatus.htm</string>
-    <string name="WebsiteLink_MapHelp_Url">http://www.mymobilecoverage.com/client/help/mymap.htm</string>
-    <string name="WebsiteLink_StatsHelp_Url">http://www.mymobilecoverage.com/client/help/mystats.htm</string>
-    <string name="WebsiteLink_StatsCalldroppedHelp_Url">http://www.mymobilecoverage.com/client/help/mystats.htm#callsdropped</string>
-    <string name="WebsiteLink_StatsVoiceQualityHelp_Url">http://www.mymobilecoverage.com/client/help/mystats.htm#voicequality</string>
-    <string name="WebsiteLink_StatsDataspeedHelp_Url">http://www.mymobilecoverage.com/client/help/mystats.htm#dataspeeds</string>
-    <string name="WebsiteLink_SettingsHelp_Url">http://www.mymobilecoverage.com/client/help/settings.htm</string>
-    <string name="WebsiteLink_LoginHelp_Url">http://www.mymobilecoverage.com/client/help/firstrun.htm#gettingstartednewuser</string>
     <!-- Crash reporting related strings -->
     <string name="ACRA_CategoryName">Crash reporting</string>
     <string name="ACRA_Enable">Enable crash reporting</string>
@@ -995,19 +972,7 @@
     <string name="radio_api4">API 4 Type command :</string>
     <string name="radio_run">RUN</string>
     <string name="ril_oem_response">Module response:</string>
-    <string name="privacy_registration_text">		MyMobileCoverage respects your privacy and will share your coverage data only with your wireless provider and/or regulatory body. Personal data will not be shared with any third party.
-</string>
-    <string name="privacy_registration_text_html">
-<![CDATA[
-			MyMobileCoverage<sup><small>SM</small></sup> respects your privacy and will share your coverage data only with your wireless provider and/or regulatory body. Personal data will not be shared with any third party.
-        ]]>
-    </string>
-    <string name="disclaimer">By pressing the Continue button, you are agreeing to the Terms and Conditions of use. Know more about our privacy policy and terms of use.</string>
-    <string name="disclaimer_html">
-<![CDATA[
-			By pressing the Continue button, you are agreeing to the Terms and Conditions of use. Know more about our <a href="http://www.mymobilecoverage.com/docs/att/privacypolicy.htm">privacy policy</a> and <a href="http://www.mymobilecoverage.com/docs/att/tos.htm">terms of use</a>.
-		]]>
-    </string>
+
     <string name="mmcTwittertext">\@mycoverageapp</string>
     <string name="mmcFacebooktext">www.facebook.com/MyMobileCoverage</string>
     <string name="RecordingStart">Start Tests</string>

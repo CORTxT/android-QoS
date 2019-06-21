@@ -1,5 +1,6 @@
 package com.cortxt.app.corelib.Utils;
 
+import android.app.Notification;
 import android.content.Context;
 import android.location.Location;
 import android.os.Handler;
@@ -88,6 +89,10 @@ public class LibCallbacks implements ICallbacks {
     public Location getLastLocation()
     {
         return mContext.getLastLocation();
+    }
+    public Location getLastGoodLocation()
+    {
+        return mContext.getLastGoodLocation();
     }
     public void setLastLocation (Location location) { mContext.setLastLocation(location);};
     public int getLastNumSatellites()
@@ -208,5 +213,10 @@ public class LibCallbacks implements ICallbacks {
             stackTrace += "\n\t" + stackTraceElements[i].getClassName() + "." + stackTraceElements[i].getMethodName() + " (" + stackTraceElements[i].getFileName() + " : " + stackTraceElements[i].getLineNumber() + ")";
         }
         return stackTrace;
+    }
+
+    public void makeServiceForeground (int notificationId, Notification notification)
+    {
+        mContext.makeServiceForeground (notificationId, notification);
     }
 }

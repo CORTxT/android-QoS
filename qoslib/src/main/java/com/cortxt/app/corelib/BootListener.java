@@ -21,6 +21,9 @@ public class BootListener extends BroadcastReceiver {
 			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "BootListener", "ACTION_BOOT_COMPLETED", "");
 			
 			boolean startOnBoot = PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREFERENCE_KEY_START_ON_BOOT, true);
+			boolean allowBoot =  (context.getResources().getBoolean(R.bool.ALLOW_START_ON_BOOT));
+			if (!allowBoot)
+				return;
 			boolean isAuthorized = ReportManager.getInstance(context.getApplicationContext()).isAuthorized();
             SecurePreferences securePrefs = MainService.getSecurePreferences(context);
 			boolean bStoppedService = securePrefs.getBoolean(PreferenceKeys.Miscellaneous.STOPPED_SERVICE, false);

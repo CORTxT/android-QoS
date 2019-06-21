@@ -1,8 +1,10 @@
 package com.cortxt.app.corelib.Utils;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
+import android.app.Notification;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -11,6 +13,7 @@ import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
+import android.support.v4.app.ActivityCompat;
 
 import com.cortxt.app.corelib.MainService;
 import com.cortxt.app.corelib.Services.Intents.IntentHandler;
@@ -26,7 +29,10 @@ import com.cortxt.app.utillib.Utils.UsageLimits;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.ListIterator;
 
 
 /**
@@ -60,8 +66,15 @@ public class QosAPI {
      */
     public static void start (Context context, boolean bFromUI)
     {
+
         Global.startService(context, bFromUI);
     }
+    public static void start (Context context, boolean bFromUI, int notificationId, Notification notification)
+    {
+
+        Global.startService(context, bFromUI, notificationId, notification);
+    }
+
 
 
     /**
@@ -105,6 +118,8 @@ public class QosAPI {
     {
         SharedPreferences securePref = MainService.getSecurePreferences(context);
         String oldlogin = securePref.getString(PreferenceKeys.User.USER_EMAIL, "");
+        if (oldlogin == null)
+            oldlogin = "";
         if (login == null || oldlogin.equals(login) || login.length() < 3)
             return;
         securePref.edit().putString(PreferenceKeys.User.USER_EMAIL, login).commit ();
@@ -124,6 +139,8 @@ public class QosAPI {
     {
         SharedPreferences securePref = MainService.getSecurePreferences(context);
         String oldlogin = securePref.getString(PreferenceKeys.User.USER_EMAIL, "");
+        if (oldlogin == null)
+            oldlogin = "";
         if (login == null || oldlogin.equals(login) || login.length() < 3)
             return;
         securePref.edit().putString(PreferenceKeys.User.USER_EMAIL, login).commit ();
@@ -494,6 +511,43 @@ public class QosAPI {
         }
     }
 
+    public static boolean upfrontPermissions (Activity activity, int code) {
+        ArrayList<String> permissions = new ArrayList<>(Arrays.asList(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WAKE_LOCK,
+                Manifest.permission.RECEIVE_BOOT_COMPLETED,
+                Manifest.permission.READ_PHONE_STATE, Manifest.permission.CALL_PHONE, Manifest.permission.MODIFY_AUDIO_SETTINGS}));
+        int PERMISSION_REQUEST_DANGEROUS = 1;
+        if (!havePermissions(permissions, activity)) {
+            // Dynamic permissions where introduced in M
+            // PERMISSION_REQUEST_DANGEROUS is an app-defined int constant. The callback method (i.e. onRequestPermissionsResult) gets the result of the request.
+            if (activity != null)
+                ActivityCompat.requestPermissions(activity, permissions.toArray(new String[permissions.size()]), code);
+            return false;
+        }
+        return true;
+    }
+
+    // Checks if user has given 'permissions'. If it has them all, it returns true. If not it returns false and modifies 'permissions' to keep only
+    // the permission that got rejected, so that they can be passed later into requestPermissions()
+    private static boolean havePermissions(ArrayList<String> permissions, Context context)
+    {
+        boolean allgranted = true;
+        ListIterator<String> it = permissions.listIterator();
+        while (it.hasNext()) {
+            if (ActivityCompat.checkSelfPermission(context, it.next()) != PackageManager.PERMISSION_GRANTED) {
+                allgranted = false;
+            }
+            else {
+                // permission granted, remove it from permissions
+                it.remove();
+            }
+        }
+        return allgranted;
+    }
+
+    static public void makeServiceForeground (int notificationId, Notification notification){
+        Global.makeServiceForeground (notificationId, notification);
+    }
+
     static public boolean isMMCServiceRunning() {
         return Global.isMMCServiceRunning();
     }
@@ -522,5 +576,13 @@ public class QosAPI {
 
         // If not then our app is not on the foreground.
         return false;
+    }
+    public static void setUsageLevel (Context context, Integer level, Integer levelCharger){
+        if (level != null)
+            PreferenceManager.getDefaultSharedPreferences(context).edit().putString(PreferenceKeys.Miscellaneous.USAGE_PROFILE, Integer.toString(level)).apply();
+        if (levelCharger != null)
+            PreferenceManager.getDefaultSharedPreferences(context).edit().putString(PreferenceKeys.Miscellaneous.USAGE_PROFILE_CHARGER, Integer.toString(levelCharger)).apply();
+
+        Global.updateUsageLevels ();
     }
 }

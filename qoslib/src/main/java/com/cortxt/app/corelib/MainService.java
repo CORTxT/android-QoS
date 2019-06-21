@@ -11,6 +11,7 @@ import android.app.ActivityManager.RunningServiceInfo;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -141,7 +142,7 @@ public class MainService extends Service {
 		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onCreate", getPackageName() + " SERVICE WAS STARTED. isMainServiceRunning = " + isMainServiceRunning());
 
 		try {
-			PreferenceManager.getDefaultSharedPreferences(this).edit().putString(PreferenceKeys.Miscellaneous.USAGE_PROFILE, "1").commit();
+			//PreferenceManager.getDefaultSharedPreferences(this).edit().putString(PreferenceKeys.Miscellaneous.USAGE_PROFILE, "1").commit();
 			mmcCallbacks = new LibCallbacks(this);
 			mReportManager = ReportManager.getInstance(getApplicationContext());
 			mPhoneState = new PhoneState (this);
@@ -706,6 +707,7 @@ public class MainService extends Service {
 		// If last location was recent, leave it alone
 		if (lastLocation != null && lastLocation.getTime() + 120000 < System.currentTimeMillis()) {
 			lastLocation = null;
+			lastGoodLocation = null;
 			intentDispatcher.updateLocation(null);
 		}
 	}
@@ -716,12 +718,17 @@ public class MainService extends Service {
 	public static Location getLastLocation(){
 		return lastLocation;  
 	}
+	public static Location getLastGoodLocation(){
+		return lastGoodLocation;
+	}
 	/*
 	 * set last location
 	 */
 	public void setLastLocation (Location location)
 	{
 		lastLocation = location;
+		if (location != null && location.getAccuracy() < 80)
+			lastGoodLocation = location;
 	}
 
 	public int getLastUserID() {
@@ -776,6 +783,7 @@ public class MainService extends Service {
 	}
 	
 	private static Location lastLocation = null;
+	private static Location lastGoodLocation = null;
 	private static Location lastSavedLocation = null;
 	//private long lastEventId = 0;
 	public void processNewFilteredLocation(Location location, int satellites) {
@@ -837,13 +845,12 @@ public class MainService extends Service {
 				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "startRadioLog", "bStart="+ bStart + " reason: " + reason);
 				if (bStart == true)
 				{
-					boolean allowSvc = true;// this.getResources().getBoolean(R.bool.ALLOW_SVCMODE);
+					boolean allowSvc = this.getResources().getBoolean(R.bool.ALLOW_SVCMODE);
 					if (bRadioActive == false && getUseRadioLog()) // && reason != null) //  && reason.equals("call"))
 			        {
 						boolean useServiceMode = false;
 						if (allowSvc == true) {
 							boolean svcmodeActive = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("KEY_SETTINGS_SVCMODE", false);
-							svcmodeActive = true;
 							if (svcmodeActive)
 								useServiceMode = true;
 						}
@@ -1457,7 +1464,18 @@ public class MainService extends Service {
 	public IntentDispatcher getIntentDispatcher(){
 		return this.intentDispatcher;
 	}
-	
+
+	public void makeServiceForeground (int notificationId, Notification notification) {
+		if (notificationId > 0 && notification != null) {
+			try {
+				startForeground(notificationId, notification);
+				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeServiceForeground", "MainService startForeground");
+			} catch (Exception e){
+				LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "makeServiceForeground", "MainService exception", e);
+			}
+		}
+	}
+
 	public void makeApplicationForeground(boolean bForeground, String message) {
 
 
@@ -1538,35 +1556,49 @@ public class MainService extends Service {
 			if (allowForeground == false)
 				return;
 
-			if (bForeground || iconAlways == true)
+			if (bForeground || iconAlways == true || Build.VERSION.SDK_INT > 25)
 			{
-				Notification notification = new Notification(icon, message, System.currentTimeMillis());
-				notification.flags |= Notification.FLAG_ONGOING_EVENT | Notification.FLAG_NO_CLEAR;
-				PendingIntent pendingIntent = null;
-				if (!notifyToLaunch.toLowerCase().equals("none")) {
-					Intent notificationIntent = new Intent();//, "com.cortxt.app.mmcui.Activities.Dashboard");
-					if (notifyToLaunch.length() == 0)
-						notifyToLaunch = "com.cortxt.app.uilib.Activities.Dashboard";
-					notificationIntent.setClassName(MainService.this, notifyToLaunch);
-					notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-					pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-				}
-				//notification.setLatestEventInfo(this, title, message, pendingIntent);
-				//startForeground(R.integer.MMC_NOTIFICATION_INT, notification);
+				Notification notification = null;
+				int notificationId = 0;
+				if (Global.serviceNotification != null && Build.VERSION.SDK_INT > 25) {
+					notification = Global.serviceNotification;
+					notificationId = Global.serviceNotificationId;
+				} else {
 
-				NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
-				NotificationCompat.Builder bBuilder =
-						new NotificationCompat.Builder(this)
-								.setSmallIcon(icon)
-								.setContentTitle(title)
-								.setContentText(message)
-								.setAutoCancel(false)
-								.setOngoing(true)
-								//.setOnlyAlertOnce(false)
-								//.setDefaults(Notification.DEFAULT_SOUND)
-								//.setPriority(Notification.PRIORITY_DEFAULT)
-								.setContentIntent(pendingIntent);
-				notificationManager.notify(4159, bBuilder.build());
+					notification = new Notification(icon, message, System.currentTimeMillis());
+					notification.flags |= Notification.FLAG_ONGOING_EVENT | Notification.FLAG_NO_CLEAR;
+					PendingIntent pendingIntent = null;
+					if (!notifyToLaunch.toLowerCase().equals("none")) {
+						Intent notificationIntent = new Intent();//, "com.cortxt.app.mmcui.Activities.Dashboard");
+						if (notifyToLaunch.length() == 0)
+							notifyToLaunch = "com.cortxt.app.uilib.Activities.Dashboard";
+						notificationIntent.setClassName(MainService.this, notifyToLaunch);
+						notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+						pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+					}
+					//notification.setLatestEventInfo(this, title, message, pendingIntent);
+
+
+					NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+					NotificationCompat.Builder bBuilder =
+							new NotificationCompat.Builder(this)
+									.setSmallIcon(icon)
+									.setContentTitle(title)
+									.setContentText(message)
+									.setAutoCancel(false)
+									.setOngoing(true)
+									//.setOnlyAlertOnce(false)
+									//.setDefaults(Notification.DEFAULT_SOUND)
+									//.setPriority(Notification.PRIORITY_DEFAULT)
+									.setContentIntent(pendingIntent);
+					notificationManager.notify(4159, bBuilder.build());
+					notificationId = R.integer.MMC_NOTIFICATION_INT;
+				}
+
+				if (Build.VERSION.SDK_INT >= 26) {
+					startForeground(notificationId, notification);
+				}
+
 			}
 			else {
 				this.stopForeground(true);

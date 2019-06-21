@@ -1090,29 +1090,30 @@ public class EventManager {
 	public void triggerUpdateEvent(boolean isCheckin, boolean isStartup){
 		EventObj event;
 
-		if (!context.getResources().getBoolean(R.bool.ALLOW_CHECK_INS) && isCheckin)
-			event = new EventObj(EventType.COV_UPDATE);
-		else
-			event = triggerSingletonEvent(EventType.COV_UPDATE);
+		try {
+			if (!context.getResources().getBoolean(R.bool.ALLOW_CHECK_INS) && isCheckin)
+				event = new EventObj(EventType.COV_UPDATE);
+			else
+				event = triggerSingletonEvent(EventType.COV_UPDATE);
 
-		event.isCheckin = isCheckin;
-		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "triggerUpdateEvent", "starting ");
-		String reason = "";
-		if (isCheckin)
-		{
-			reason = "periodic 3 hour check in";
-			context.pruneDB();
-			context.getCellHistory().clearCellHistory();
-			context.getConnectionHistory().clearHistory();
+			event.isCheckin = isCheckin;
+			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "triggerUpdateEvent", "starting ");
+			String reason = "";
+			if (isCheckin) {
+				reason = "periodic 3 hour check in";
+				context.pruneDB();
+				context.getCellHistory().clearCellHistory();
+				context.getConnectionHistory().clearHistory();
+			} else if (isStartup)
+				reason = "checking in on startup";
+			else
+				reason = "user triggered update";
+			//if (!isStartup)
+			//	context.verifyRegistration ();
+			//String apikey = context.getApiKey(context);
+		} catch (Exception e){
+			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "triggerUpdateEvent", "exception ", e);
 		}
-		else if (isStartup)
-			reason = "checking in on startup";
-		else
-			reason = "user triggered update";
-		//if (!isStartup)
-		//	context.verifyRegistration ();
-		//String apikey = context.getApiKey(context);
-
 		PreferenceManager.getDefaultSharedPreferences(context).edit().putLong(PreferenceKeys.Miscellaneous.LAST_TIME, System.currentTimeMillis()).commit();
 
 	}

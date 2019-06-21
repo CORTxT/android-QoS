@@ -939,10 +939,10 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onServiceStateChanged null", "");
 			return;
 		}
-		Integer dataState = SignalEx.getPrivate("mDataRegState", serviceState);
+		//Integer dataState = SignalEx.getPrivate("mDataRegState", serviceState);
 
-		if (serviceState.getState() != 0 && dataState == 0)
-			serviceState.setState(0);
+		//if (serviceState.getState() != 0 && dataState == 0)
+		//	serviceState.setState(0);
 
 		boolean isRoaming = serviceState.getRoaming();
 		String operator = serviceState.getOperatorAlphaLong();
@@ -1360,7 +1360,8 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		}
 		catch (Exception e)
 		{
-			LoggerUtil.logToFile(LoggerUtil.Level.WTF, TAG, "checkCallLog", "exception:", e);
+			//LoggerUtil.logToFile(LoggerUtil.Level.WTF, TAG, "checkCallLog", "exception:", e);
+			mPhoneState.setCallConnected(true);
 		}
 		return connectEvent;
 	}

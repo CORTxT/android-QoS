@@ -14,11 +14,11 @@ android {
         }
 
     }
-    compileSdkVersion 25
-    buildToolsVersion '27.0.3'
+    compileSdkVersion 26
+    //buildToolsVersion '27.0.3'
     defaultConfig {
         minSdkVersion 14
-        targetSdkVersion 22
+        targetSdkVersion 26
         versionCode System.getenv("BUILD_NUMBER") as Integer ?: 0
         versionName "2.0.1." + System.getenv("BUILD_NUMBER") ?: "0"
         testApplicationId "com.cortxt.app.MMC.test"
@@ -67,18 +67,38 @@ android {
         checkReleaseBuilds false
         abortOnError false
     }
+
+//    flavorDimensions "feat"
+//    productFlavors {
+//        Pro {
+//            dimension "feat"
+//        }
+//        Lite {
+//            dimension "feat"
+//        }
+//
+//    }
+
 }
 
 repositories {
+    google()
     jcenter()
     maven {url "http://nexus.mymobilecoverage.com:8081/nexus/content/repositories/releases"}
     maven {
         url "https://maven.google.com" // Google's Maven repository
     }
 }
+configurations {
+    proCompile
+    liteCompile
+}
 dependencies {
-    //compile 'com.android.support:appcompat-v7:22.2.0'
+    //compile 'com.android.support:appcompat-v7:22.2.0'compile project(':mmcextension')
+
+    //compile project(path: ':mmcextension', configuration: 'feat')
     compile project(':mmcextension')
+    //compile project(path: ':mmcextension', configuration: 'default')
     //compile "com.restcomm.app:mmcextension:1.0.6"
 
 }

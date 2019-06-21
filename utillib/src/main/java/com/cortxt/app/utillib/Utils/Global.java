@@ -1,6 +1,7 @@
 package com.cortxt.app.utillib.Utils;
 
 import android.app.ActivityManager;
+import android.app.Notification;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
@@ -10,6 +11,8 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
+import android.os.Bundle;
 import android.preference.PreferenceManager;
 
 import com.cortxt.app.utillib.ICallbacks;
@@ -26,6 +29,8 @@ public class Global {
     public static UsageLimits usageLimits;
     public static long UPDATE_PERIOD = 60000 * 180L;
     public static long SCANAPP_PERIOD = 60000 * 5L;
+    public static Notification serviceNotification;
+    public static int serviceNotificationId = 0;
 
     public static void setCallback (ICallbacks cb)
     {
@@ -38,7 +43,16 @@ public class Global {
         return usageLimits;
     }
 
+    public static void updateUsageLevels () {
+        if (usageLimits != null)
+            usageLimits.updateTravelPreference();
+    }
+
     public static void startService (Context context, boolean bUI)
+    {
+        startService (context, bUI, 0, null);
+    }
+    public static void startService (Context context, boolean bUI, int notificationId, Notification notification)
     {
         String packagename = context.getPackageName();
 
@@ -52,11 +66,19 @@ public class Global {
         if (!isServiceYeilded (context)) {
             Intent bgServiceIntent = new Intent();
             bgServiceIntent.setComponent(new ComponentName(context.getPackageName(), "com.cortxt.app.corelib.MainService"));
+            serviceNotification = notification;
+            serviceNotificationId = notificationId;
             LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "Global", "isServiceYeilded", "MMC Service started for " + packagename);
 
-            context.startService(bgServiceIntent);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(bgServiceIntent);
+            } else {
+                context.startService(bgServiceIntent);
+            }
+            //context.startForegroundService(bgServiceIntent);
         }
     }
+
 
     public static boolean isServiceYeilded (Context context)
     {
@@ -75,7 +97,7 @@ public class Global {
     {
         Intent bgServiceIntent = new Intent();
         bgServiceIntent.setComponent(new ComponentName(context.getPackageName(), "com.cortxt.app.corelib.MainService"));
-        context.startService(bgServiceIntent);
+        context.stopService(bgServiceIntent);
     }
     public static boolean isMainServiceRunning(Context context) {
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
@@ -292,5 +314,18 @@ public class Global {
             }
         }
         return 0;
+    }
+
+    // Ensure no ../\ to prevent directory traversal
+    public static String safeFileName (String filename) {
+        if (filename.contains("/") || filename.contains("\"") || filename.contains("..")){
+            return "invalid";
+        } else
+            return filename;
+    }
+
+    public static void makeServiceForeground (int notificationId, Notification notification){
+        if (callbacks != null)
+            callbacks.makeServiceForeground (notificationId,notification);
     }
 }

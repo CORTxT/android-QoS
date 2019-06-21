@@ -550,7 +550,7 @@ public class ReportManager {
     public Location getLastKnownLocation ()
     {
         if (mmcService != null)
-            return mmcService.getLastLocation();
+            return mmcService.getLastGoodLocation();
         return mLocalStorageReporter.getLastKnownLocation ();
     }
     public void setLastKnownLocation (Location location)

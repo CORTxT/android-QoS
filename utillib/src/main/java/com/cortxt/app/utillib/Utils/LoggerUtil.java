@@ -7,7 +7,11 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.util.Date;
 
+import android.content.Context;
+import android.os.Environment;
 import android.util.Log;
+
+import com.veracode.annotation.CRLFCleanser;
 
 
 /**
@@ -23,11 +27,12 @@ public class LoggerUtil {
     /**
      * Path of file that {@link LoggerUtil#logToFile} write to.
      */
-    public static final String LOG_FILE = "/sdcard/mmclog.txt";
+    public String LOG_FILE = "/sdcard/mmclog.txt";
 
     public static final String LOG_TRANSIT_FILE = "/sdcard/mmclogtransit.txt";
 
     public static final String TAG = "com.cortxt.app.MMC";
+    public static File logFile = null;
 
     /**
      * Flag to hold whether the application is debug mode or not
@@ -63,11 +68,29 @@ public class LoggerUtil {
         DateFormat dateFormat = DateFormat.getDateTimeInstance();
         String timestamp = dateFormat.format(d);
 
-        String logText = timestamp + " - " + level + " - " +  className + " - " + methodName + " - " + message + "\n";
+        String logText = timestamp + " - " + level + " - " +  className + " - " + methodName + " - " + message;
+        logText = sanitize (logText);
+        writeToFile(logText);
+        if(isDebuggable()){
+            //message = org.owasp.esapi.StringUtilities.stripControls (methodName + " " + message);
+            message = sanitize (methodName + " " + message);
+            Log.i(className, message);
+        }
 
-        writeToFile(logText, LOG_FILE);
-        if(isDebuggable())
-            Log.i(className, methodName + " " + message);
+    }
+
+    public static void init (Context context){
+        if (logFile == null) {
+            logFile = new File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "mmclog");
+            //logFile = new File(filePath);
+        }
+    }
+
+    @CRLFCleanser
+    private static String sanitize (String logText){
+        if (logText.contains("\n") || logText.contains("\r"))
+            logText = logText.replace ("\r", "").replace ("\n", "");
+        return logText;
     }
 
     public static void logToTransitFile(Level level, String className, String methodName, String message) {
@@ -75,11 +98,14 @@ public class LoggerUtil {
         DateFormat dateFormat = DateFormat.getDateTimeInstance();
         String timestamp = dateFormat.format(d);
 
-        String logText = timestamp + " - " + level + " - " +  className + " - " + methodName + " - " + message + "\n";
-
-        writeToFile(logText, LOG_TRANSIT_FILE);
-        if(isDebuggable())
-            Log.i(className, methodName + " " + message);
+        String logText = timestamp + " - " + level + " - " +  className + " - " + methodName + " - " + message;
+        logText = sanitize (logText);
+        writeToFile(logText);
+        if(isDebuggable()){
+            message = sanitize (methodName + " " + message);
+            //message = org.owasp.esapi.StringUtilities.stripControls (methodName + " " + message);
+            Log.i(className, message);
+        }
     }
 
     /**
@@ -108,18 +134,23 @@ public class LoggerUtil {
      * Temporary method for logging events and samples to separate file
      * @param message
      */
-    public static void logToOtherFile(String message) {
-        writeToFile(message, "/sdcard/events.txt");
-    }
+//    public static void logToOtherFile(String message) {
+//        writeToFile(message, "/sdcard/events.txt");
+//    }
 
-    private static void writeToFile(String text, String filePath) {
+    private static void writeToFile(String text) {
         if(isDebuggable()) {
             synchronized(logFileLock) {
                 try {
-                    File file = new File(filePath);
-                    if(!file.exists()) {
-                        file.createNewFile();
-                    }
+                    text = text + "\n";
+
+//                    File file = new File(filePath);
+//                    if(!file.exists()) {
+//                        file.createNewFile();
+//                    }
+                    if (logFile == null)
+                        return;
+                    File file = logFile;
                     FileWriter fileWriter = new FileWriter(file, true);
                     BufferedWriter outputStream = new BufferedWriter(fileWriter);
 
@@ -127,7 +158,7 @@ public class LoggerUtil {
                         outputStream.append(text);
                     }
                     catch (IOException ioe_writingToFile) {
-                        //Log.e("MMCLogger", "error writing to log file " + ioe_writingToFile.getMessage(), null);
+                        Log.e("MMCLogger", "error writing to log file ", ioe_writingToFile);
                     }
                     finally {
                         outputStream.close();
@@ -135,7 +166,7 @@ public class LoggerUtil {
                     }
                 }
                 catch (IOException ioe_openingFile) {
-                    //Log.e("MMCLogger", "error opening log file " + ioe_openingFile.getMessage(), null);
+                    Log.e("MMCLogger", "error opening log file " + ioe_openingFile.getMessage(), null);
                 }
             }
         }

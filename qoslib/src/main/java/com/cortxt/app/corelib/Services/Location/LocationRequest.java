@@ -179,15 +179,17 @@ public class LocationRequest {
 		this.mContext = context;
 		if (context instanceof Activity)
 			this.activity = (Activity)context;
-		Location location1, location; // , location2;
+		Location location1 = null, location; // , location2;
 		location = ReportManager.getInstance(context.getApplicationContext()).getLastKnownLocation();
-		location1 = ((LocationManager) context.getSystemService(Context.LOCATION_SERVICE)).getLastKnownLocation(LocationManager.GPS_PROVIDER);
+		try {
+		location1 = ((LocationManager) context.getSystemService(Context.LOCATION_SERVICE)).getLastKnownLocation(LocationManager.GPS_PROVIDER);}
+		catch (Exception e){}
 		//location2 = ((LocationManager) context.getSystemService(Context.LOCATION_SERVICE)).getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-		if (location != null && location.getTime() + 3 * 3600 * 1000 < System.currentTimeMillis())
+		if (location != null && location.getTime() + 3 * 3600 * 1000 > System.currentTimeMillis())
 		{
 			// Prefer the MMC Stored location, but take the GPS last location if newer
 			this.lastKnownLocation = location;
-			if (location1 != null && location1.getTime() + 60000 < location.getTime())
+			if (location1 != null && location1.getTime() - 60000 > location.getTime())
 				this.lastKnownLocation = location1;
 		}
 		else {
@@ -220,6 +222,9 @@ public class LocationRequest {
 			locListener.setOperationTimeout(0);
 			locListener.setProvider(LocationManager.GPS_PROVIDER);
 			bGPSRunning = true;
+			bFinalLocation = false;
+			bGPSTimeout = false;
+			bFirstNewLocation = true;//false;
 			gpsStartTime = System.currentTimeMillis();
 			if (MainService.getGpsManager() != null)
 				MainService.getGpsManager().registerListener(locListener);
@@ -306,8 +311,9 @@ public class LocationRequest {
 			//if (gpsLocation == null)
 			//	statsLocation = netLocation;
 			bFinalLocation = true;
-			handleLocation (true);
+
 			LocationStopped(true);
+			handleLocation (true);
 		}
 		//
 		/**
@@ -369,11 +375,12 @@ public class LocationRequest {
 							bLocationChanged = true;
 						if (location.getAccuracy() <= finalAccuracy) // && satellites > 0
 						{
-							if (System.currentTimeMillis() - gpsStartTime > 8000 && (satellitesInFix > 3 || (System.currentTimeMillis() - gpsStartTime > 60000 && satellites < 8)))
+							if (System.currentTimeMillis() - gpsStartTime > 8000 && (satellitesInFix > 3 || (System.currentTimeMillis() - gpsStartTime > 60000 && satellites < 8) || (System.currentTimeMillis() - gpsStartTime > 30000 && satellites < 2)))
 							{
 								bFinalLocation = true;
-								ReportManager.getInstance(mContext.getApplicationContext()).setLastKnownLocation(location);
+								//ReportManager.getInstance(mContext.getApplicationContext()).setLastKnownLocation(location);
 							}
+							ReportManager.getInstance(mContext.getApplicationContext()).setLastKnownLocation(location);
 							if (MainService.getGpsManager() != null)
 								MainService.getGpsManager().detectTravellingFromDistance();
 						}
@@ -384,7 +391,8 @@ public class LocationRequest {
 							bFirstLocation = true;
 						} else
 							bFirstLocation = false;
-						handleLocation(bNewLocation || bFinalLocation);
+						if (bGPSRunning == true)
+							handleLocation(bNewLocation || bFinalLocation);
 
 
 						//if (mOnNewLocationListener != null)
@@ -393,7 +401,8 @@ public class LocationRequest {
 						//	 handler.sendMessage(new Message ());
 						//return false;
 					} else {
-						handleLocation (false);
+						if (bGPSRunning == true)
+							handleLocation (false);
 					}
 
 
@@ -550,10 +559,13 @@ public class LocationRequest {
 
 	void releaseWakeLock ()
 	{
-		while (wakeLock != null && wakeLock.isHeld())
-		{
-			wakeLock.release();
-			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "LocationRequest", "acquireWakeLock", "RELEASE");
+		try {
+			while (wakeLock != null && wakeLock.isHeld()) {
+				wakeLock.release();
+				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "LocationRequest", "acquireWakeLock", "RELEASE");
+			}
+		} catch (Exception e){
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "LocationRequest", "acquireWakeLock", "exception", e);
 		}
 	}
 	

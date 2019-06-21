@@ -16,7 +16,6 @@
     <string name="CustomText_Track">Registro de cobertura</string>
     <string name="CustomText_StopTrack">Detener grabación</string>
     <string name="CustomText_TrackEnds">Duración de la sesión: </string>
-    <string name="dashboard_feedback_url"/>
 
     <string name="eventcustom_droppedcall">Llamada caída</string>
     <string name="eventcustom_failedcall">Llamada fallida</string>

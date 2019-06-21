@@ -389,7 +389,7 @@ public class UsageLimits  implements OnSharedPreferenceChangeListener{
 		//_travelEnable = PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.Miscellaneous.TRAVEL_ENABLE, true);
 		if (EventObj.isDisabledEvent(owner.getContext(),EventObj.DISABLE_TRAVEL))
 			_travelEnable = false;
-		getUsageProfileSetting ();
+		//getUsageProfileSetting ();
 		//owner.changeWakeType (getUsageProfile());
 		
 		owner.updateTravelPreference();

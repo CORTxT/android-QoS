@@ -283,6 +283,7 @@ import java.util.HashMap;
 			filename += "_" + ifloor;
 		}
 		filename += "_" + strEventdate;
+		filename = Global.safeFileName (filename);
 		filename = "/" + filename;//.replace(" ", "");
 		filename = filepath + filename;
 
@@ -293,6 +294,7 @@ import java.util.HashMap;
 					return false;
 				filePaths[0] = filename + ".png";
 //				fos = new FileOutputStream(Environment.getExternalStorageDirectory().toString() + "/mmc.png");
+
 				fos = new FileOutputStream(filePaths[0]);
 				if (fos == null)
 					return false;
@@ -313,6 +315,8 @@ import java.util.HashMap;
 	{
 		try {
 			filePaths[1] = filename + ".html";
+			if (filePaths[1].contains(".."))
+				return false;
 			FileOutputStream fos = new FileOutputStream(filePaths[1]);
 			if (fos == null)
 				return false;
@@ -367,7 +371,7 @@ import java.util.HashMap;
 					ArrayList<Uri> uris = new ArrayList<Uri>();
 					//convert from paths to Android friendly Parcelable Uri's
 					for (String file : filePaths) {
-						if (file != null) {
+						if (file != null && !file.contains("..")) {
 							File fileIn = new File(file);
 							Uri u = Uri.fromFile(fileIn);
 							uris.add(u);
@@ -382,7 +386,8 @@ import java.util.HashMap;
 					ArrayList<Uri> uris = new ArrayList<Uri>();
 					//convert from paths to Android friendly Parcelable Uri's
 					for (String file : filePaths) {
-						if (file != null) {
+						if (file != null && !file.contains("..")) {
+
 							File fileIn = new File(file);
 							Uri u = Uri.fromFile(fileIn);
 							uris.add(u);

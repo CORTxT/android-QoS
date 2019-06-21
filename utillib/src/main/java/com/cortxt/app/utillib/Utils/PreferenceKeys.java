@@ -7,6 +7,7 @@ import android.preference.PreferenceManager;
 //import android.preference.PreferenceManager;
 import com.cortxt.app.utillib.DataObjects.EventType;
 import com.securepreferences.SecurePreferences;
+import com.securepreferences.SecurePreferencesOld;
 
 
 public final class PreferenceKeys {
@@ -35,10 +36,13 @@ public final class PreferenceKeys {
 	}
 
 	private static SecurePreferences securePrefs = null;
+	private static SecurePreferencesOld securePrefsOld = null;
 	public static com.securepreferences.SecurePreferences getSecurePreferences (Context context)
 	{
 		if (securePrefs == null)
 			securePrefs = new com.securepreferences.SecurePreferences(context);
+		if (securePrefsOld == null)
+			securePrefsOld = new com.securepreferences.SecurePreferencesOld(context);
 		return securePrefs;
 	}
 
@@ -46,6 +50,9 @@ public final class PreferenceKeys {
     {
         SharedPreferences securePref = getSecurePreferences(context);
         String value = securePref.getString (key, def);
+        if (value == null){
+        	value = securePrefsOld.getString (key, def);
+		}
         return value;
     }
 

@@ -1,5 +1,6 @@
 package com.cortxt.app.utillib;
 
+import android.app.Notification;
 import android.content.Context;
 import android.location.Location;
 import android.os.Handler;
@@ -28,6 +29,7 @@ public interface ICallbacks{
     int getLastServiceState();
 
     Location getLastLocation();
+    Location getLastGoodLocation();
     void setLastLocation (Location location);
     int getLastNumSatellites();
 
@@ -54,4 +56,5 @@ public interface ICallbacks{
     String getDriveTestTrigger ();
     void triggerDriveTest (String reason, boolean start);
     void stopTracking ();
+    void makeServiceForeground (int notificationId, Notification notification);
 }
