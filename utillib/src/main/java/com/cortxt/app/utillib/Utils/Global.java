@@ -68,10 +68,13 @@ public class Global {
             bgServiceIntent.setComponent(new ComponentName(context.getPackageName(), "com.cortxt.app.corelib.MainService"));
             serviceNotification = notification;
             serviceNotificationId = notificationId;
-            LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "Global", "isServiceYeilded", "MMC Service started for " + packagename);
+            LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "Global", "startService", "MMC Service started for " + packagename);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(bgServiceIntent);
+                if (notification != null)
+                    context.startForegroundService(bgServiceIntent);
+                else
+                    LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "Global", "startService failed", "notification=null for " + packagename);
             } else {
                 context.startService(bgServiceIntent);
             }

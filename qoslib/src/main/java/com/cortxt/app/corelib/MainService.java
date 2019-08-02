@@ -156,7 +156,7 @@ public class MainService extends Service {
 			serviceRunning = true;
 
 			powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-			wakeLockScreen = powerManager.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "MMC wakelock");
+			wakeLockScreen = powerManager.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "MMC:wakelock");
 			modifyWakeLock ();
 			iUserID = getUserID(MainService.this);
 
@@ -176,11 +176,13 @@ public class MainService extends Service {
 				//killMMCZombies();
 			if (monitoringEnabled) {
 				LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "OnCreate", "MMC startup");
+
+				String msg = Global.getAppName(this) + " " + getString(R.string.MMC_Notification_message);
+				makeApplicationForeground(false, msg);
 				registerReceiver(intentHandler, intentHandler.declareIntentFilters());
 				// start all our helpers and managers
 				connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 				phoneStateListener = new LibPhoneStateListener(this, mPhoneState);
-
 
 				trackingManager = new TrackingManager(this);
 
@@ -194,9 +196,6 @@ public class MainService extends Service {
 				set15MinuteAlarmManager(intervalDM * 60 * 1000, appscansecDM);
 				travelDetector = new TravelDetector(mmcCallbacks);
 				cellHistory = new CellHistory((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE));
-
-				String msg = Global.getAppName(this) + " " + getString(R.string.MMC_Notification_message);
-				makeApplicationForeground(false, msg);
 
 				if (this.getConnectivityManager() != null) {
 					NetworkInfo networkInfo = this.getConnectivityManager().getActiveNetworkInfo();
@@ -283,8 +282,12 @@ public class MainService extends Service {
 			bRadioActive = false;
 		}
 
-		unregisterReceiver(intentHandler);
-		unRegisterPhoneStateListener();
+		try {
+			unregisterReceiver(intentHandler);
+			unRegisterPhoneStateListener();
+		} catch (Exception e){
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onDestroy", "unregister exception", e);
+		}
 
 		travelDetector.stop();
 
@@ -1478,7 +1481,7 @@ public class MainService extends Service {
 
 	public void makeApplicationForeground(boolean bForeground, String message) {
 
-
+		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "message=" + message);
 		boolean iconAlways = PreferenceManager.getDefaultSharedPreferences(MainService.this).getBoolean(PreferenceKeys.Miscellaneous.ICON_ALWAYS, false);
 		
 		if (DeviceInfoOld.getPlatform() != 3 && !android.os.Build.BRAND.toLowerCase().contains("blackberry")) //  && message != null && message.length() > 0)
@@ -1527,7 +1530,7 @@ public class MainService extends Service {
 					icon = R.drawable.ic_stat_notification_icon;
 			}
 			// special wifi icon to protect against wifi stopping the service
-			if (message != null && message.indexOf("wifi") == 0)
+			if (message != null && message.indexOf("wifi") == 0 && Build.VERSION.SDK_INT < 25)
 			{
 				if (iconAlways == true || mmcActive)
 					return;
@@ -1553,8 +1556,10 @@ public class MainService extends Service {
 				intent.putExtra(IntentHandler.MMC_FOREGROUND_MESSAGE, message);
 			this.sendBroadcast(intent);
 			boolean allowForeground = (this.getResources().getBoolean(R.bool.ALLOW_SERVICE_FOREGROUND));
-			if (allowForeground == false)
+			if (allowForeground == false) {
+				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "ALLOW_SERVICE_FOREGROUND = false");
 				return;
+			}
 
 			if (bForeground || iconAlways == true || Build.VERSION.SDK_INT > 25)
 			{
@@ -1596,7 +1601,11 @@ public class MainService extends Service {
 				}
 
 				if (Build.VERSION.SDK_INT >= 26) {
-					startForeground(notificationId, notification);
+					LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "call startForeground " + notification);
+					if (notification != null && notificationId != 0 && notification.getChannelId() != null)
+						startForeground(notificationId, notification);
+					else
+						LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "startForeground bad notification " + notification);
 				}
 
 			}
