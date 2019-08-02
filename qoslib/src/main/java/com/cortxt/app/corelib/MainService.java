@@ -1527,7 +1527,7 @@ public class MainService extends Service {
 					icon = R.drawable.ic_stat_notification_icon;
 			}
 			// special wifi icon to protect against wifi stopping the service
-			if (message != null && message.indexOf("wifi") == 0)
+			if (message != null && message.indexOf("wifi") == 0 && Build.VERSION.SDK_INT < 25)
 			{
 				if (iconAlways == true || mmcActive)
 					return;
@@ -1553,8 +1553,10 @@ public class MainService extends Service {
 				intent.putExtra(IntentHandler.MMC_FOREGROUND_MESSAGE, message);
 			this.sendBroadcast(intent);
 			boolean allowForeground = (this.getResources().getBoolean(R.bool.ALLOW_SERVICE_FOREGROUND));
-			if (allowForeground == false)
+			if (allowForeground == false) {
+				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "ALLOW_SERVICE_FOREGROUND = false");
 				return;
+			}
 
 			if (bForeground || iconAlways == true || Build.VERSION.SDK_INT > 25)
 			{
@@ -1597,6 +1599,7 @@ public class MainService extends Service {
 
 				if (Build.VERSION.SDK_INT >= 26) {
 					startForeground(notificationId, notification);
+					LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "call startForeground ");
 				}
 
 			}

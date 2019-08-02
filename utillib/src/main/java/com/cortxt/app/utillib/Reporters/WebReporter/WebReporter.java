@@ -241,11 +241,15 @@ public class WebReporter  {
 			try {
 				HttpURLConnection connection = (HttpURLConnection) request.openConnection();
 				connection.connect();
-				if (connection.getResponseCode() == 401)
+				int response = connection.getResponseCode();
+				connection.disconnect();
+				if (response == 401)
 					return false;
 			}
 			catch (Exception e) {
 				LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "isAuthorized", "exception", e);
+			} finally {
+
 			}
 		}
 		return authorized; //  && mApiKey.length() > 10);
