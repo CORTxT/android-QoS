@@ -1,10 +1,13 @@
 package com.cortxt.app.utillib.DataObjects;
 
+import android.Manifest;
 import android.app.Service;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.telephony.CellIdentityLte;
 import android.telephony.CellLocation;
 import android.telephony.ServiceState;
@@ -341,18 +344,27 @@ public class PhoneState {
 
     // Check the Voice Network type using new Hidden TelephonyManager method
     // This static version is for the connection history to access
-    public static int getVoiceNetworkType (ServiceState serviceState)
+    public static int getVoiceNetworkType (Context mContext)
     {
         Method m = null;
         try {
-            // Java reflection to gain access to TelephonyManager's
-            // ITelephony getter
-            Class c = Class.forName(serviceState.getClass().getName());
-            Method mI = c.getDeclaredMethod("getRilVoiceRadioTechnology");
-            mI.setAccessible(true);
-            int voiceTechRil = (Integer)mI.invoke(serviceState);
-            int voiceTech = PhoneState.rilRadioTechnologyToNetworkType(voiceTechRil);
-            return voiceTech;
+            // check the voice network type instead
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                if (mContext.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+                    TelephonyManager telephonyManager = (TelephonyManager)mContext.getSystemService(Context.TELEPHONY_SERVICE);
+                    int nt = telephonyManager.getVoiceNetworkType();// tel.getVoiceNetworkType(serviceState);
+                    if (nt > 0)
+                        return nt;
+                }
+            }
+//            // Java reflection to gain access to TelephonyManager's
+//            // ITelephony getter
+//            Class c = Class.forName(serviceState.getClass().getName());
+//            Method mI = c.getDeclaredMethod("getRilVoiceRadioTechnology");
+//            mI.setAccessible(true);
+//            int voiceTechRil = (Integer)mI.invoke(serviceState);
+//            int voiceTech = PhoneState.rilRadioTechnologyToNetworkType(voiceTechRil);
+//            return voiceTech;
         }
         catch (Exception e)
         {
@@ -365,30 +377,39 @@ public class PhoneState {
     // Check the Voice Network type using new Hidden TelephonyManager method
     public int getVoiceNetworkType ()
     {
-        // we're going to get the voice network type from the last ServiceState
-        Method m = null;
-        try {
-            // Java reflection to gain access to TelephonyManager's
-            Class c = Class.forName(telephonyManager.getClass().getName());
-            Method mI = c.getDeclaredMethod("getVoiceNetworkType");
-            mI.setAccessible(true);
-            int voiceTech = (Integer)mI.invoke(telephonyManager);
-            //LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "getVoiceNetworkType", "Voice Network = " + voiceTech);
-
-            Method mI2 = c.getDeclaredMethod("getDataNetworkType");
-            mI2.setAccessible(true);
-            int dataTech = (Integer)mI2.invoke(telephonyManager);
-            //LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "getDataNetworkType", "Data Network = " + dataTech);
-
-
-            return voiceTech;
-        }
-        catch (Exception e)
-        {
-            String s = e.toString();
-            //LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "getVoiceNetworkType", "exception", e);
+        // check the voice network type instead
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (mContext.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+                int nt = telephonyManager.getVoiceNetworkType();// tel.getVoiceNetworkType(serviceState);
+                if (nt > 0)
+                    return nt;
+            }
         }
         return previousNetworkType;
+//        // we're going to get the voice network type from the last ServiceState
+//        Method m = null;
+//        try {
+//            // Java reflection to gain access to TelephonyManager's
+//            Class c = Class.forName(telephonyManager.getClass().getName());
+//            Method mI = c.getDeclaredMethod("getVoiceNetworkType");
+//            mI.setAccessible(true);
+//            int voiceTech = (Integer)mI.invoke(telephonyManager);
+//            //LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "getVoiceNetworkType", "Voice Network = " + voiceTech);
+//
+//            Method mI2 = c.getDeclaredMethod("getDataNetworkType");
+//            mI2.setAccessible(true);
+//            int dataTech = (Integer)mI2.invoke(telephonyManager);
+//            //LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "getDataNetworkType", "Data Network = " + dataTech);
+//
+//
+//            return voiceTech;
+//        }
+//        catch (Exception e)
+//        {
+//            String s = e.toString();
+//            //LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "getVoiceNetworkType", "exception", e);
+//        }
+//        return previousNetworkType;
     }
     public boolean isRoaming() {
 
@@ -428,8 +449,7 @@ public class PhoneState {
         this.networkType = telephonyManager.getNetworkType();
         if (this.networkType == PhoneState.NETWORK_NEWTYPE_IWLAN)
         {
-            // check the voice network type instead
-            int nt = getVoiceNetworkType ();
+            int nt = getVoiceNetworkType();
             if (nt > 0)
                 return nt;
         }

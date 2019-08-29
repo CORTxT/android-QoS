@@ -156,7 +156,7 @@ public class MainService extends Service {
 			serviceRunning = true;
 
 			powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-			wakeLockScreen = powerManager.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "MMC wakelock");
+			wakeLockScreen = powerManager.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "MMC:wakelock");
 			modifyWakeLock ();
 			iUserID = getUserID(MainService.this);
 
@@ -175,12 +175,18 @@ public class MainService extends Service {
 
 				//killMMCZombies();
 			if (monitoringEnabled) {
-				LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "OnCreate", "MMC startup");
+				LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "OnCreate", "MMC startup");
+
+				String msg = Global.getAppName(this) + " " + getString(R.string.MMC_Notification_message);
+				makeApplicationForeground(false, msg);
 				registerReceiver(intentHandler, intentHandler.declareIntentFilters());
 				// start all our helpers and managers
 				connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-				phoneStateListener = new LibPhoneStateListener(this, mPhoneState);
-
+				try {
+					phoneStateListener = new LibPhoneStateListener(this, mPhoneState);
+				} catch (Exception e2){
+					LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "OnCreate", "LibPhoneStateListener exception", e2);
+				}
 
 				trackingManager = new TrackingManager(this);
 
@@ -194,9 +200,6 @@ public class MainService extends Service {
 				set15MinuteAlarmManager(intervalDM * 60 * 1000, appscansecDM);
 				travelDetector = new TravelDetector(mmcCallbacks);
 				cellHistory = new CellHistory((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE));
-
-				String msg = Global.getAppName(this) + " " + getString(R.string.MMC_Notification_message);
-				makeApplicationForeground(false, msg);
 
 				if (this.getConnectivityManager() != null) {
 					NetworkInfo networkInfo = this.getConnectivityManager().getActiveNetworkInfo();
@@ -248,6 +251,7 @@ public class MainService extends Service {
         }
 		catch (Exception e) {
 			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "OnCreate", "Exception occured during startup", e);
+			this.stopSelf();
 		}
 
 
@@ -283,17 +287,24 @@ public class MainService extends Service {
 			bRadioActive = false;
 		}
 
-		unregisterReceiver(intentHandler);
-		unRegisterPhoneStateListener();
+		try {
+			unregisterReceiver(intentHandler);
+			unRegisterPhoneStateListener();
+		} catch (Exception e){
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onDestroy", "unregister exception", e);
+		}
 
-		travelDetector.stop();
+		if (travelDetector != null)
+			travelDetector.stop();
 
 		netLocationManager.unregisterAllListeners();//.stopGps();
 		gpsManager.unregisterAllListeners();
 		keepAwake(false, false);
 
-		eventManager.stop();
-		trackingManager.cancelScheduledEvents();
+		if (eventManager != null)
+			eventManager.stop();
+		if (trackingManager != null)
+			trackingManager.cancelScheduledEvents();
 		if (startupGpsTimerTask != null)
 			startupGpsTimerTask.cancel();
 
@@ -374,8 +385,7 @@ public class MainService extends Service {
 	{
 		LoggerUtil.logToFile(LoggerUtil.Level.WARNING, TAG, "restartSelf", getPackageName() + " SERVICE WILL RESTART");
 		this.stopSelf();
-		SecurePreferences securePrefs = MainService.getSecurePreferences(this);
-		boolean stopped = securePrefs.getBoolean(PreferenceKeys.Miscellaneous.STOPPED_SERVICE, false);
+		boolean stopped = PreferenceKeys.getSecurePreferenceBoolean(PreferenceKeys.Miscellaneous.STOPPED_SERVICE, false, this);
 		// If this MMC app is yeilding to another MMC app, it will stop when safe, but not restart
 		if (Global.isServiceYeilded(this))
 			stopped = true;
@@ -450,16 +460,16 @@ public class MainService extends Service {
 
 		if(Build.VERSION.SDK_INT <= Build.VERSION_CODES.ICE_CREAM_SANDWICH)
 		{
-			wakeLockPartial = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "MMC Partial wakelock");
+			wakeLockPartial = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "MMC:Partial wakelock");
 		}
 		else
 		{
 			int screenOnUpdate = PreferenceManager.getDefaultSharedPreferences(MainService.this).getInt(PreferenceKeys.Miscellaneous.SCREEN_ON_UPDATE, 0);
 
 			if (screenOnUpdate == 1)
-				wakeLockPartial = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "MMC Partial wakelock");
+				wakeLockPartial = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "MMC:Partial wakelock");
 			else
-				wakeLockPartial = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MMC Partial wakelock");
+				wakeLockPartial = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MMC:Partial wakelock");
 		}
 
 	}
@@ -510,6 +520,8 @@ public class MainService extends Service {
 		int appscansecDM = PreferenceManager.getDefaultSharedPreferences(MainService.this).getInt(PreferenceKeys.Miscellaneous.APPSCAN_DATAMONITOR, 60*5);
 		int dormantMode = PreferenceManager.getDefaultSharedPreferences(MainService.this).getInt(PreferenceKeys.Miscellaneous.USAGE_DORMANT_MODE, 0);
 
+		if (intervalDM == 0)
+			appscan_seconds = 0;
 		if (dormantMode > 0)
 			setting = 0;
 		else if (setting == -1) // re-enable app scan according to setting
@@ -631,27 +643,25 @@ public class MainService extends Service {
 	{
 		if (mApikey != null)
 			return mApikey;
-		SharedPreferences securePref = MainService.getSecurePreferences(context);
-		String value = securePref.getString(PreferenceKeys.User.APIKEY, null);
-		mApikey = value;
+		String value = PreferenceKeys.getSecurePreferenceString(PreferenceKeys.User.APIKEY, null, context);
 		return value;
+
 	}
 
 
 	public static int getUserID (Context context)
 	{
-		SharedPreferences securePref = MainService.getSecurePreferences(context);
-		int value = securePref.getInt(PreferenceKeys.User.USER_ID, -1);
+		int value = PreferenceKeys.getSecurePreferenceInt(PreferenceKeys.User.USER_ID, -1, context);
 		return value;
 	}
 
-	private static com.securepreferences.SecurePreferences securePrefs = null;
-	public static com.securepreferences.SecurePreferences getSecurePreferences (Context context)
-	{
-		if (securePrefs == null)
-			securePrefs = new com.securepreferences.SecurePreferences(context);
-		return securePrefs;
-	}
+//	private static com.securepreferences.SecurePreferences securePrefs = null;
+//	public static com.securepreferences.SecurePreferences getSecurePreferences (Context context)
+//	{
+//		if (securePrefs == null)
+//			securePrefs = new com.securepreferences.SecurePreferences(context);
+//		return securePrefs;
+//	}
 	
 	public boolean isScreenOn ()
 	{
@@ -1478,7 +1488,7 @@ public class MainService extends Service {
 
 	public void makeApplicationForeground(boolean bForeground, String message) {
 
-
+		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "message=" + message);
 		boolean iconAlways = PreferenceManager.getDefaultSharedPreferences(MainService.this).getBoolean(PreferenceKeys.Miscellaneous.ICON_ALWAYS, false);
 		
 		if (DeviceInfoOld.getPlatform() != 3 && !android.os.Build.BRAND.toLowerCase().contains("blackberry")) //  && message != null && message.length() > 0)
@@ -1598,8 +1608,11 @@ public class MainService extends Service {
 				}
 
 				if (Build.VERSION.SDK_INT >= 26) {
-					startForeground(notificationId, notification);
-					LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "call startForeground ");
+					LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "call startForeground " + notification);
+					if (notification != null && notificationId != 0 && notification.getChannelId() != null)
+						startForeground(notificationId, notification);
+					else
+						LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "makeApplicationForeground", "startForeground bad notification " + notification);
 				}
 
 			}

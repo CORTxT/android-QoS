@@ -78,8 +78,7 @@ public class IntentDispatcher {
 
 	public void updateNetwork ()
 	{
-		SharedPreferences securePref = MainService.getSecurePreferences(owner);
-		String apn = securePref.getString(PreferenceKeys.Miscellaneous.KEY_APN, null);
+		String apn = PreferenceKeys.getSecurePreferenceString (PreferenceKeys.Miscellaneous.KEY_APN, null, owner);
 		Intent intent = new Intent(CommonIntentBundleKeysOld.ACTION_NETWORK_UPDATE);
 		intent.putExtra("APN", apn);
 		intent.putExtra(CommonIntentBundleKeysOld.KEY_UPDATE_NETTYPE, owner.getPhoneState().getNetworkType());

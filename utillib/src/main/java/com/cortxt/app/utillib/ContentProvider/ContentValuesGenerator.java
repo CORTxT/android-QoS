@@ -24,6 +24,7 @@ import android.telephony.CellInfoCdma;
 import android.telephony.CellInfoGsm;
 import android.telephony.CellInfoLte;
 import android.telephony.CellInfoWcdma;
+import android.telephony.CellSignalStrength;
 import android.telephony.CellSignalStrengthCdma;
 import android.telephony.CellSignalStrengthGsm;
 import android.telephony.CellSignalStrengthLte;
@@ -161,6 +162,9 @@ public class ContentValuesGenerator {
 			if (serviceMode != null && serviceMode.getLong("time") + 5000 < System.currentTimeMillis())
 				serviceMode = null;
 			values.put(Tables.SignalStrengths.WIFISIGNAL, wifiSignal);
+			if (Build.VERSION.SDK_INT >= 19 && cellInfos != null && cellInfos.size() > 0 && cellInfos.get(0).isRegistered())
+				signal = null;
+
 			if (signal == null || signal.getSignalStrength() == null) {
 				// If regular API fails us, lets get all this info from CellInfos API
 				if(Build.VERSION.SDK_INT >= 19) {
@@ -183,8 +187,15 @@ public class ContentValuesGenerator {
 								values.put(Tables.SignalStrengths.COVERAGE, 5);
 								values.put(Tables.SignalStrengths.LTE_RSRP, lteSignal.getDbm());
 
-								Integer lteRsrq = SignalEx.getPrivate("mRsrq", lteSignal);
-								Integer lteSnr = SignalEx.getPrivate("mRssnr", lteSignal);
+								Integer lteRsrq = 0, lteSnr = 0;
+								if (Build.VERSION.SDK_INT >= 26) {
+									lteRsrq = lteSignal.getRsrq();
+									lteSnr = lteSignal.getRssnr();
+								}else {
+									lteRsrq = SignalEx.getPrivate("mRsrq", lteSignal);
+									lteSnr = SignalEx.getPrivate("mRssnr", lteSignal);
+								}
+
 								if (lteRsrq > -30 && lteRsrq < -1)
 									values.put(Tables.SignalStrengths.LTE_RSRQ, lteRsrq);
 								if (lteSnr == null || lteSnr < -200 || lteSnr > 1000)
@@ -228,6 +239,35 @@ public class ContentValuesGenerator {
 						}
 
 					}
+				}
+			}
+			else if (android.os.Build.VERSION.SDK_INT >= 29) {
+				if ( signal.getSignalStrength() != null) {
+					SignalStrength signalStrength = (SignalStrength)signal.getSignalStrength();
+					List<CellSignalStrength> signals = signalStrength.getCellSignalStrengths();
+					if (signals != null && signals.size() > 0) {
+						CellSignalStrength signall = signals.get(0);
+						if (signall instanceof CellSignalStrengthLte) {
+							CellSignalStrengthLte lteSignal = (CellSignalStrengthLte)signall;
+							//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "ContentValues", "generateFromSignal", "lteSignal = " + lteSignal.toString());
+							if (lteSignal.getDbm() > -140 && lteSignal.getDbm() < -30) {
+								values.put(Tables.SignalStrengths.SIGNAL, lteSignal.getDbm());
+								values.put(Tables.SignalStrengths.COVERAGE, 5);
+								values.put(Tables.SignalStrengths.LTE_RSRP, lteSignal.getDbm());
+
+								Integer lteRsrq = lteSignal.getRsrq();
+								Integer lteSnr = lteSignal.getRssnr();
+								if (lteRsrq > -30 && lteRsrq < -1)
+									values.put(Tables.SignalStrengths.LTE_RSRQ, lteRsrq);
+								if (lteSnr == null || lteSnr < -200 || lteSnr > 1000)
+									lteSnr = null;
+								else
+									values.put(Tables.SignalStrengths.LTE_SNR, lteSnr);
+								return values;
+							}
+						}
+					}
+					String s = signals.toString();
 				}
 			}
 			if (signal == null) // as a result of a service outage

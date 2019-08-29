@@ -7,7 +7,7 @@ import android.preference.PreferenceManager;
 //import android.preference.PreferenceManager;
 import com.cortxt.app.utillib.DataObjects.EventType;
 import com.securepreferences.SecurePreferences;
-import com.securepreferences.SecurePreferencesOld;
+//import com.securepreferences.SecurePreferencesOld;
 
 
 public final class PreferenceKeys {
@@ -36,32 +36,92 @@ public final class PreferenceKeys {
 	}
 
 	private static SecurePreferences securePrefs = null;
-	private static SecurePreferencesOld securePrefsOld = null;
+	//private static SecurePreferencesOld securePrefsOld = null;
 	public static com.securepreferences.SecurePreferences getSecurePreferences (Context context)
 	{
 		if (securePrefs == null)
 			securePrefs = new com.securepreferences.SecurePreferences(context);
-		if (securePrefsOld == null)
-			securePrefsOld = new com.securepreferences.SecurePreferencesOld(context);
+//		if (securePrefsOld == null)
+//			securePrefsOld = new com.securepreferences.SecurePreferencesOld(context);
 		return securePrefs;
 	}
 
+	public static boolean containsSecurePreference (String key, Context context){
+		try {
+			SharedPreferences securePref = getSecurePreferences(context);
+			boolean value = securePref.contains(key);
+			return value;
+
+		}catch (Exception e){
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "PrefenceKeys", "containsSecurePreference " + key, "exception", e);
+			return false;
+		}
+	}
+
+	public static boolean getSecurePreferenceBoolean (String key, boolean def, Context context) {
+		try {
+			SharedPreferences securePref = getSecurePreferences(context);
+			boolean value = securePref.getBoolean(key, def);
+			return value;
+		} catch (Exception e) {
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "PrefenceKeys", "getSecurePreferenceBoolean " + key, "exception", e);
+			return def;
+		}
+	}
+	public static void putSecurePreferenceBoolean (String key, boolean val, Context context) {
+		try {
+			SharedPreferences securePref = getSecurePreferences(context);
+			securePref.edit().putBoolean(key, val).commit();
+		} catch (Exception e) {
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "PrefenceKeys", "putSecurePreferenceBoolean " + key, "exception", e);
+			return;
+		}
+	}
     public static String getSecurePreferenceString (String key, String def, Context context)
     {
-        SharedPreferences securePref = getSecurePreferences(context);
-        String value = securePref.getString (key, def);
-        if (value == null){
-        	value = securePrefsOld.getString (key, def);
+    	try {
+			SharedPreferences securePref = getSecurePreferences(context);
+			String value = securePref.getString(key, def);
+			return value;
+		} catch (Exception e){
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "PrefenceKeys", "getSecurePreferenceString " + key, "exception", e);
+    		return def;
 		}
-        return value;
+//        if (value == null){
+//        	value = securePrefsOld.getString (key, def);
+//		}
+        //return value;
     }
+	public static void putSecurePreferenceString (String key, String val, Context context) {
+		try {
+			SharedPreferences securePref = getSecurePreferences(context);
+			securePref.edit().putString(key, val).commit();
+		} catch (Exception e) {
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "PrefenceKeys", "putSecurePreferenceString " + key, "exception", e);
+			return;
+		}
+	}
 
 	public static int getSecurePreferenceInt (String key, int def, Context context)
     {
-        SharedPreferences securePref = getSecurePreferences(context);
-        int value = securePref.getInt(key, def);
-        return value;
+		try {
+			SharedPreferences securePref = getSecurePreferences(context);
+			int value = securePref.getInt(key, def);
+			return value;
+		} catch (Exception e){
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "PrefenceKeys", "getSecurePreferenceInt " + key, "exception", e);
+			return def;
+		}
     }
+	public static void putSecurePreferenceInt (String key, int val, Context context) {
+		try {
+			SharedPreferences securePref = getSecurePreferences(context);
+			securePref.edit().putInt(key, val).commit();
+		} catch (Exception e) {
+			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "PrefenceKeys", "putSecurePreferenceInt " + key, "exception", e);
+			return;
+		}
+	}
 
 	public static boolean getSMSPermissionsAllowed(Context context, boolean checkForSMSSpeedTest)
 	{

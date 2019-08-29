@@ -451,10 +451,10 @@ public class EventUploader implements Runnable{
 			return;
 	
 		Gson gson = new Gson();
-        SharedPreferences secureSettings = MainService.getSecurePreferences(owner);
-		if (secureSettings.contains(PreferenceKeys.Miscellaneous.EVENTS_QUEUE)){
+        //SharedPreferences secureSettings = MainService.getSecurePreferences(owner);
+		if (PreferenceKeys.containsSecurePreference(PreferenceKeys.Miscellaneous.EVENTS_QUEUE, owner) ){ //secureSettings.contains(PreferenceKeys.Miscellaneous.EVENTS_QUEUE)){
 			try {
-				String strQueue = secureSettings.getString(PreferenceKeys.Miscellaneous.EVENTS_QUEUE, "");
+				String strQueue = PreferenceKeys.getSecurePreferenceString(PreferenceKeys.Miscellaneous.EVENTS_QUEUE, "", owner);
 				//LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "loadQueue", strQueue);
 				if (strQueue.length() < 100)
 					return;
@@ -509,10 +509,10 @@ public class EventUploader implements Runnable{
 		sb.deleteCharAt(sb.length()-1);
 		sb.append("]");
 
-		SharedPreferences preferenceSettings = MainService.getSecurePreferences(owner);
+		//SharedPreferences preferenceSettings = MainService.getSecurePreferences(owner);
 		String stringQueue = sb.toString();//  jsonQueue.toString();
 
-		preferenceSettings.edit().putString(PreferenceKeys.Miscellaneous.EVENTS_QUEUE, stringQueue).commit();
+		PreferenceKeys.putSecurePreferenceString(PreferenceKeys.Miscellaneous.EVENTS_QUEUE, stringQueue, owner);
 	}
 	/**
 	 * Uses the provided event instance to generate a {@link EventData} instance.

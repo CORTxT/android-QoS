@@ -228,7 +228,10 @@ public class CellHistory {
 									if (Build.VERSION.SDK_INT >= 24 && ltecell.getEarfcn() > 0 && ltecell.getEarfcn() < 1000000)
 										_list_chan[n] = ltecell.getEarfcn();
 
-									int rsrq = SignalEx.getPrivate("mRsrq", ltesig);
+									int rsrq = 0; // SignalEx.getPrivate("mRsrq", ltesig);
+									if (Build.VERSION.SDK_INT >= 26) {
+										rsrq = ltesig.getRsrq();
+									}
 									if (rsrq < -1)
 										_list_qual[n] = rsrq;
 									if (ltecell.getPci() > 0 && ltecell.getPci() < 1000) {
@@ -307,7 +310,7 @@ public class CellHistory {
 				{
 			        // Try to obtain the Neighbor list from the API
 					// If the API neighbor list has more active entries than what the log provided, use it instead
-			        List<NeighboringCellInfo> neighboringList = telephonyManager.getNeighboringCellInfo();
+			        List<NeighboringCellInfo> neighboringList = null; // telephonyManager.getNeighboringCellInfo();
 			        len = neighboringList.size();
 					if (neighboringList != null && len > 0)
 					{

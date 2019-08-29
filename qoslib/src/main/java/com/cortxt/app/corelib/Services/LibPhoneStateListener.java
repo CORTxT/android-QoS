@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Notification;
@@ -17,6 +19,7 @@ import android.app.Service;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -33,12 +36,15 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
+import android.support.annotation.RequiresApi;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.telephony.CellIdentityLte;
 import android.telephony.CellInfo;
 import android.telephony.CellInfoCdma;
 import android.telephony.CellInfoLte;
 import android.telephony.CellLocation;
+import android.telephony.CellSignalStrength;
 import android.telephony.CellSignalStrengthLte;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
@@ -74,6 +80,7 @@ import com.cortxt.app.corelib.UtilsOld.DataMonitorStats;
 
 import com.cortxt.com.mmcextension.datamonitor.AppDataStatisticsRunnable;
 import com.cortxt.app.utillib.Utils.UsageLimits;
+
 import org.json.JSONObject;
 
 /**
@@ -96,6 +103,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	private RestCommManager restcommManager;
 	public long tmLastCellUpdate = 0, tmLastCell = 0;
 	public boolean validSignal = false;
+
 	public static final String TAG = LibPhoneStateListener.class.getSimpleName();
 	public static final int MMC_DROPPED_NOTIFICATION = 1001;
 	/**
@@ -104,7 +112,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	 * dropped call.
 	 */
 	public static final int CELL_LOCATION_EXPIRY_FOR_DROPPED_CALL = 5000;
-	
+
 
 	/**
 	 * This variable stores a copy of the previously received network state.
@@ -114,12 +122,12 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	//private ServiceState previousServiceStateObj = null;
 	//private int previousServiceStateAirplane = 99;
 	public static TelephonyManager telephonyManager;
-
+	public boolean trackDataActivity = true;
 	private Handler dataActivtyHandler;
 	// keeps track of whether a global ServiceMode Panel has been manually closed by the user, its displayed during ServiceMode in debug
 	public static boolean closedServicePanel = false;
 
-//	private boolean bOffHook = false;
+	//	private boolean bOffHook = false;
 //	private static JSONObject mServicemode = null;
 //	private String prevSvcValues = "";
 //	private int networkType = TelephonyManager.NETWORK_TYPE_UNKNOWN;
@@ -127,6 +135,15 @@ public class LibPhoneStateListener extends PhoneStateListener {
 //	private long timeConnected = 0, timeRinging = 0, timeDialed = 0;
 //	private int lastKnownCallState;
 	private PhoneState mPhoneState = null;
+
+	private static final int MAX_CELLINFO_WAIT_MILLIS = 5000;
+	private static final int MAX_LISTENER_WAIT_MILLIS = 1000; // usually much less
+	// The maximum interval between CellInfo updates from the modem. In the AOSP code it varies
+	// between 2 and 10 seconds, and there is an allowable modem delay of 3 seconds, so if we
+	// cannot get a seconds CellInfo update within 15 seconds, then something is broken.
+	// See DeviceStateMonitor#CELL_INFO_INTERVAL_*
+	private static final int MAX_CELLINFO_INTERVAL_MILLIS = 15000; // in AOSP the max is 10s
+
 	/**
 	 * Constructor that gets a copy of the owner object so that it can 
 	 * manipulate the variables of the owner.
@@ -134,17 +151,19 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	public LibPhoneStateListener(MainService owner, PhoneState phonestate) {
 		this.owner = owner;
 		mPhoneState = phonestate;
-		telephonyManager = (TelephonyManager)owner.getSystemService(Context.TELEPHONY_SERVICE);
+		telephonyManager = (TelephonyManager) owner.getSystemService(Context.TELEPHONY_SERVICE);
 		mPhoneState.telephonyManager = telephonyManager;
 		restcommManager = new RestCommManager(this, owner);
+		trackDataActivity = (owner.getResources().getBoolean(R.bool.ALLOW_TRACK_DATAACTIVITY));
+
 		dataActivtyHandler = new Handler();
 		dataActivityRunnable = new AppDataStatisticsRunnable(owner.getCallbacks(), dataActivtyHandler, owner.getDataMonitorStats().getStatsManager());
 		//mySensorManager = (SensorManager)owner.getSystemService(
 		//		owner.SENSOR_SERVICE);
 
 		// Proximity sensor code exists in case we want to go back to blacking out screen and forcing screen on during phone calls
-        //myProximitySensor = mySensorManager.getDefaultSensor(
-        //		Sensor.TYPE_PROXIMITY);
+		//myProximitySensor = mySensorManager.getDefaultSensor(
+		//		Sensor.TYPE_PROXIMITY);
 
 	}
 
@@ -163,7 +182,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 //	private String lastCellString = "";
 
 	private SensorManager mySensorManager;
-	private Timer disconnectTimer = new Timer ();
+	private Timer disconnectTimer = new Timer();
 	private long totalRxBytes = 0, totalTxBytes = 0;
 	private String lastCellString = "";
 	private SignalEx prevMMCSignal = null;
@@ -175,35 +194,36 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	@Override
 	public void onCellLocationChanged(CellLocation location) {
 		super.onCellLocationChanged(location);
-			
+
 		try {
-            checkCDMACellSID (location);
+			checkCDMACellSID(location);
 			CellLocationEx cellEx = new CellLocationEx(location);
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-				List<CellInfo> cells = telephonyManager.getAllCellInfo();
+				List<CellInfo> cells = null;
+				if (ActivityCompat.checkSelfPermission(owner, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+					cells = telephonyManager.getAllCellInfo();
+				}
 
 				if (cells != null && cells.size() > 1 && cells.get(1).isRegistered()) {
 					if (cells.get(1) instanceof CellInfoLte) {
-						cellEx.setLTEInfo((CellInfoLte)cells.get(1));
-						cellEx.setCellInfo (cells.get(0));
+						cellEx.setLTEInfo((CellInfoLte) cells.get(1));
+						cellEx.setCellInfo(cells.get(0));
 					} else if (cells.get(0) instanceof CellInfoLte) {
-						cellEx.setLTEInfo((CellInfoLte)cells.get(0));
-						cellEx.setCellInfo (cells.get(1));
+						cellEx.setLTEInfo((CellInfoLte) cells.get(0));
+						cellEx.setCellInfo(cells.get(1));
 					}
-				}
-				else if (cells != null && cells.size() > 0 && cells.get(0).isRegistered())
-					cellEx.setCellInfo (cells.get(0));
+				} else if (cells != null && cells.size() > 0 && cells.get(0).isRegistered())
+					cellEx.setCellInfo(cells.get(0));
 			}
 			processNewCellLocation(cellEx);
-			
+
 			// See if this cellLocation has inner GsmLocation
-			checkInnerGsmCellLocation (location);
+			checkInnerGsmCellLocation(location);
 			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onCellLocationChanged", location.toString());
 
-		} catch (InterruptedException intEx){
+		} catch (InterruptedException intEx) {
 			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onCellLocationChanged", "InterruptedException: " + intEx.getMessage());
-		}
-		catch (Exception ex){
+		} catch (Exception ex) {
 			String err = ex.toString();
 			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onCellLocationChanged", "InterruptedException: " + err);
 		}
@@ -261,22 +281,25 @@ public class LibPhoneStateListener extends PhoneStateListener {
 	  }
     };
     */
+	private int lastdata = -1;
+
 	@Override
-	public void onDataActivity(int data){
+	public void onDataActivity(int data) {
 		super.onDataActivity(data);
+		if (!trackDataActivity)
+			return;
 		if (owner.getUsageLimits().getDormantMode() > 0)
 			return;
+		if (data == lastdata)
+			return;
+		lastdata = data;
 		String activity = null;
-		try
-		{
+		try {
 			activity = owner.getConnectionHistory().updateConnectionHistory(telephonyManager.getNetworkType(), telephonyManager.getDataState(), telephonyManager.getDataActivity(), mPhoneState.previousServiceStateObj, owner.getConnectivityManager().getActiveNetworkInfo(), owner);
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onDataActivity", "ex " + e.getMessage());
 		}
-		if (data == TelephonyManager.DATA_ACTIVITY_IN || data == TelephonyManager.DATA_ACTIVITY_INOUT)
-		{
+		if (data == TelephonyManager.DATA_ACTIVITY_IN || data == TelephonyManager.DATA_ACTIVITY_INOUT) {
 			if (activity != null) {
 				owner.getIntentDispatcher().updateConnection(activity, true);
 			}
@@ -284,97 +307,91 @@ public class LibPhoneStateListener extends PhoneStateListener {
 			if (PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.User.PASSIVE_SPEED_TEST, true)
 					|| Global.SCANAPP_PERIOD > 0) {
 				//Don't allow if a speedtest is in progress
-				if(PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.Miscellaneous.SPEEDTEST_INPROGRESS, false)) {
+				if (PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.Miscellaneous.SPEEDTEST_INPROGRESS, false)) {
 					return;
 				}
-				if(PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.Miscellaneous.VIDEOTEST_INPROGRESS, false)) {
+				if (PreferenceManager.getDefaultSharedPreferences(owner).getBoolean(PreferenceKeys.Miscellaneous.VIDEOTEST_INPROGRESS, false)) {
 					return;
 				}
 				//if (owner.getUsageLimits().getUsageProfile () == UsageLimits.MINIMAL)
 				//	return;
 				//server allows - default no
 				int allow = PreferenceManager.getDefaultSharedPreferences(owner).getInt(PreferenceKeys.Miscellaneous.PASSIVE_SPEEDTEST_SERVER, 0);
-				if (!EventObj.isDisabledStat(owner,EventObj.DISABLESTAT_APPS_THROUGHPUT) && Global.SCANAPP_PERIOD > 0)
+				if (!EventObj.isDisabledStat(owner, EventObj.DISABLESTAT_APPS_THROUGHPUT) && Global.SCANAPP_PERIOD > 0)
 					allow = 1;
-				if(allow > 0) {
-					dataThrougput();  
+				if (allow > 0) {
+					dataThrougput();
 				}
-			}				
-		}
-		else
-		{
+			}
+		} else {
 			if (activity != null) {
 				owner.getIntentDispatcher().updateConnection(activity, false);
 			}
 		}
 
-	}		
-	
+	}
+
 	public void dataThrougput() {
-		synchronized(this) {
-			totalRxBytes = TrafficStats.getTotalRxBytes();		
-			totalTxBytes = TrafficStats.getTotalTxBytes();		
+		synchronized (this) {
+			totalRxBytes = TrafficStats.getTotalRxBytes();
+			totalTxBytes = TrafficStats.getTotalTxBytes();
 			if (dataActivityRunnable.hasDataActivity == 0) {
 				//dataActivityRunnable.initializeHasDataActivity(1);
 				dataActivityRunnable.init(totalRxBytes, totalTxBytes, true);
-			}	
-			else if (dataActivityRunnable.hasDataActivity == 1)
-			{
+			} else if (dataActivityRunnable.hasDataActivity == 1) {
 				//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "onDataActivity", "in sampling");
-			}
-			else if (dataActivityRunnable.hasDataActivity == 2)
-			{
+			} else if (dataActivityRunnable.hasDataActivity == 2) {
 				//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "onDataActivity", "already in download");
 			}
 		}
 	}
-	
+
 	@Override
-	public void onDataConnectionStateChanged(int state, int networkType){
+	public void onDataConnectionStateChanged(int state, int networkType) {
 		super.onDataConnectionStateChanged(state, networkType);
 		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onDataConnectionStateChanged", String.format("Network type: %d, State: %d", networkType, state));
-	
+
 		//notify MainService of the new network type
 		mPhoneState.updateNetworkType(networkType);
-		processLastSignal ();
-		
+		processLastSignal();
+
 		int datastate = telephonyManager.getDataState();
 		// disregard network change events if data is disabled or in airplane mode
 		if (datastate == TelephonyManager.DATA_SUSPENDED || mPhoneState.previousServiceState == mPhoneState.SERVICE_STATE_AIRPLANE)
 			return;
-		
+
 		if (PhoneState.ActiveConnection(owner) > 1) {// 10=Wifi, 11=Wimax, 12=Ethernet, 0=other
 			mPhoneState.previousNetworkTier = -1;
-			return;		
+			return;
 		}
-		
+
 		// Ignore any data outages that occur just after turning screen off, these are probably not to be blamed on the carrier
 		if (mPhoneState.getScreenOnTime(false) + 30000 > System.currentTimeMillis())
 			return;
-		
-		try{
 
-			String conn = owner.getConnectionHistory().updateConnectionHistory (networkType, state, telephonyManager.getDataActivity(), mPhoneState.previousServiceStateObj, owner.getConnectivityManager().getActiveNetworkInfo(),owner);
+		try {
+
+			String conn = owner.getConnectionHistory().updateConnectionHistory(networkType, state, telephonyManager.getDataActivity(), mPhoneState.previousServiceStateObj, owner.getConnectivityManager().getActiveNetworkInfo(), owner);
 			if (conn != null)
-		   		owner.getIntentDispatcher().updateConnection(conn, false);
-			
-		} catch (Exception e) {}
-		
+				owner.getIntentDispatcher().updateConnection(conn, false);
+
+		} catch (Exception e) {
+		}
+
 
 		int networkGeneration = mPhoneState.getNetworkGeneration(networkType);
-		
+
 		// The 3G outage will be handled by the Service state outage
 		if (mPhoneState.previousServiceState == ServiceState.STATE_OUT_OF_SERVICE || mPhoneState.previousServiceState == ServiceState.STATE_EMERGENCY_ONLY)
-			return; 
+			return;
 		//if the network generation hasn't changed, then don't cause an event
-		if (mPhoneState.previousNetworkTier == networkGeneration && mPhoneState.previousNetworkState == state){
+		if (mPhoneState.previousNetworkTier == networkGeneration && mPhoneState.previousNetworkState == state) {
 			return;
 		}
 
 
 		SignalEx signal = mPhoneState.getLastMMCSignal();
-		if (signal != null)
-		{
+		if (signal != null) {
 			signal.setTimestamp(System.currentTimeMillis());
 			mPhoneState.clearLastMMCSignal();  // to force a duplicate signal to be added
 			processNewMMCSignal(signal, lastKnownCellInfo);
@@ -385,27 +402,26 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		// First network state
 		if (mPhoneState.previousNetworkType == -1)
 			mPhoneState.previousNetworkType = networkType;
-		else
-		{
-			switch (networkGeneration){
-				case 3:	//3g
-				case 4:	//3g
+		else {
+			switch (networkGeneration) {
+				case 3:    //3g
+				case 4:    //3g
 					stateChanged_3g(state);
 					break;
-				case 5:	//3g
+				case 5:    //3g
 					stateChanged_4g(state);
 					break;
-					
+
 				case 1:
-				case 2:	//2g
+				case 2:    //2g
 					stateChanged_2g(state);
 					break;
-					
+
 				// disconnected data without disconnecting service?
 				case 0:
 					stateChanged_0g(state);
 					break;
-				
+
 			}
 		}
 		//update the previous network generation and state
@@ -414,32 +430,29 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		// If there is truly an outage, the service state listener will update the previousNetworkTier to 0
 		mPhoneState.previousNetworkState = state;
 		mPhoneState.previousNetworkType = networkType;
-		
+
 	}
-	public void processLastSignal ()
-	{
+
+	public void processLastSignal() {
 		if (mPhoneState.lastKnownSignalStrength != null)
 			onSignalStrengthsChanged(mPhoneState.lastKnownSignalStrength);
 	}
 
-	public void onVoLteServiceStateChanged (Object lteState)
-	{
+	public void onVoLteServiceStateChanged(Object lteState) {
 		if (lteState != null)
 			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onVoLteServiceStateChanged", lteState.toString());
 		else
 			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onVoLteServiceStateChanged", "null");
 	}
 
-	public void onOemHookRawEvent (byte[] oemData)
-	{
+	public void onOemHookRawEvent(byte[] oemData) {
 		if (oemData != null)
 			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onOemHookRawEvent", "length = " + Integer.toString(oemData.length));
 		else
 			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onOemHookRawEvent", "null");
 	}
 
-	public void onPreciseCallStateChanged (Object preciseCallState)
-	{
+	public void onPreciseCallStateChanged(Object preciseCallState) {
 		if (preciseCallState != null)
 			LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "onPreciseCallStateChanged", preciseCallState.toString());
 		else
@@ -452,11 +465,11 @@ public class LibPhoneStateListener extends PhoneStateListener {
 		//if (DeviceInfoOld.getPlatform() != 1)  //Not an Android device
 		//	return;
 
-		if (!owner.isMMCActiveOrRunning())
-		{
+		if (!owner.isMMCActiveOrRunning()) {
 			mPhoneState.lastKnownSignalStrength = signalStrength;
 			return;
 		}
+
 		//signalStrength = null;
 		mPhoneState.lastKnownSignalStrength = null;
 //		if (signalStrength != null)
@@ -467,32 +480,71 @@ public class LibPhoneStateListener extends PhoneStateListener {
 
 		int pref = networkPreference(owner.getApplicationContext());
 		try {
-			if (mPhoneState.previousServiceState == ServiceState.STATE_IN_SERVICE || mPhoneState.previousServiceState == ServiceState.STATE_EMERGENCY_ONLY)
-			{
+			if (mPhoneState.previousServiceState == ServiceState.STATE_IN_SERVICE || mPhoneState.previousServiceState == ServiceState.STATE_EMERGENCY_ONLY) {
 				SignalEx mmcSignal = new SignalEx(signalStrength);
-				processNewMMCSignal(mmcSignal,lastKnownCellInfo);
-				
-			}
-			else
-			{
+				processNewMMCSignal(mmcSignal, lastKnownCellInfo);
+
+			} else {
 				SignalEx mmcSignal = new SignalEx();
-				processNewMMCSignal(mmcSignal,lastKnownCellInfo);
+				processNewMMCSignal(mmcSignal, lastKnownCellInfo);
 			}
+
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-			List<CellInfo> cells = telephonyManager.getAllCellInfo();
-			if (cells != null)
-				onCellInfoChanged(cells);
-//				for (int c =0; c<cells.size(); c++)
-//				{ 
-//					String msg =  "cells[" + c + "]=" + cells.get(c).toString();
-//					MMCLogger.logToFile(MMCLogger.Level.ERROR, TAG, "onSignalStrengthsChanged", "cells[" + c + "]=" + cells.get(c).toString());
-//					//Log.d(TAG, "cells[" + c + "]=" + cells.get(c).toString());
-//				}
+				if (ActivityCompat.checkSelfPermission(owner, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+					List<CellInfo> cells = null;
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+						// Make a blocking call to requestCellInfoUpdate for results (for simplicity of test).
+						CellInfoResultsCallback resultsCallback = new CellInfoResultsCallback(this);
+						telephonyManager.requestCellInfoUpdate(mSimpleExecutor, resultsCallback);
+						//resultsCallback.wait(MAX_CELLINFO_WAIT_MILLIS);
+						//cells = resultsCallback.cellInfo;
+					}
+//					else {
+//						cells = telephonyManager.getAllCellInfo();
+//					}
+					cells = telephonyManager.getAllCellInfo();
+					if (cells != null)
+						onCellInfoChanged(cells);
+				}
+
+	//				for (int c =0; c<cells.size(); c++)
+	//				{
+	//					String msg =  "cells[" + c + "]=" + cells.get(c).toString();
+	//					MMCLogger.logToFile(MMCLogger.Level.ERROR, TAG, "onSignalStrengthsChanged", "cells[" + c + "]=" + cells.get(c).toString());
+	//					//Log.d(TAG, "cells[" + c + "]=" + cells.get(c).toString());
+	//				}
 			}
 			
 		} catch (Exception e) {
 			LoggerUtil.logToFile(LoggerUtil.Level.ERROR, TAG, "onSignalStrengthsChanged", "Exception " + e.getMessage());
 		}
+	}
+
+	private Executor mSimpleExecutor = new Executor() {
+		@Override
+		public void execute(Runnable r) {
+			r.run();
+		}
+	};
+
+	@RequiresApi(api = 29)
+	private static class CellInfoResultsCallback extends TelephonyManager.CellInfoCallback {
+		List<CellInfo> cellInfo;
+		LibPhoneStateListener listener;
+		public CellInfoResultsCallback (LibPhoneStateListener listener) {
+			this.listener = listener;
+		}
+		@Override
+		public synchronized void onCellInfo(List<CellInfo> cellInfo) {
+			this.cellInfo = cellInfo;
+			//notifyAll();
+			listener.onCellInfoChanged(cellInfo);
+		}
+//		public synchronized void wait(int millis) throws InterruptedException {
+//			if (cellInfo == null) {
+//				super.wait(millis);
+//			}
+//		}
 	}
 
 	// delay by 1 second so that it can check call log if needed to verify call connected
@@ -763,6 +815,7 @@ public class LibPhoneStateListener extends PhoneStateListener {
 				@Override
 				public void run() {
 					int tech = mPhoneState.getVoiceNetworkType ();
+
 					if (tech == mPhoneState.NETWORK_NEWTYPE_LTE && event != null) {
 						event.setFlag (EventObj.CALL_VOLTE, true);
 						LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, TAG, "getRilVoiceRadioTechnology", "VOLTE CALL DETECTED");

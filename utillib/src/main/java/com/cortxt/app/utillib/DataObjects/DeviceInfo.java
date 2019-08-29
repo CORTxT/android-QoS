@@ -8,12 +8,16 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Build;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 
 import com.cortxt.app.utillib.Utils.LoggerUtil;
 import com.cortxt.app.utillib.Utils.SystemPropertiesProxy;
@@ -27,7 +31,7 @@ import com.cortxt.app.utillib.Utils.SystemPropertiesProxy;
 public abstract class DeviceInfo {
 	private static final String TAG = DeviceInfo.class.getSimpleName();
 
-	public static final String[] SUPPORTED_LANGUAGES = { "en", "es" };
+	public static final String[] SUPPORTED_LANGUAGES = {"en", "es"};
 
 	public static final String KEY_TYPE = "type";
 	public static final String TYPE_ANDROID = "Android";
@@ -40,7 +44,7 @@ public abstract class DeviceInfo {
 	public static final String KEY_RADIO = "radio";
 	public static final String KEY_SERIAL = "serial";
 	public static final String KEY_BOOTLOADER = "bootloader";
-	public static final String KEY_LANGUAGE= "language";
+	public static final String KEY_LANGUAGE = "language";
 
 	public static final String KEY_PHONE_TYPE = "phoneType";
 	public static final String TYPE_GSM = "gsm";
@@ -52,9 +56,9 @@ public abstract class DeviceInfo {
 	public static final String KEY_MCC = "mcc";
 	public static final String KEY_MNC = "mnc";
 	public static final String KEY_CARRIER = "carrier";
-	public static final String KEY_IMSI = "imsi";	
+	public static final String KEY_IMSI = "imsi";
 	public static final String KEY_IP = "ipv4";
-	public static final String KEY_DEVICE_ROOTED="rooted";
+	public static final String KEY_DEVICE_ROOTED = "rooted";
 	protected Context mContext;
 	protected TelephonyManager mTelephonyManager;
 
@@ -67,17 +71,17 @@ public abstract class DeviceInfo {
 		//String str = android.os.Build.getRadioVersion();
 		//String v = System.getProperty("os.version");
 		int phoneType = mTelephonyManager.getPhoneType();
-		if (phoneType == TelephonyManager.PHONE_TYPE_CDMA )
+		if (phoneType == TelephonyManager.PHONE_TYPE_CDMA)
 			return TYPE_CDMA;
-		else if (phoneType == TelephonyManager.PHONE_TYPE_GSM )
+		else if (phoneType == TelephonyManager.PHONE_TYPE_GSM)
 			return TYPE_GSM;
 		else if (phoneType == TelephonyManager.NETWORK_TYPE_LTE)
 			return TYPE_LTE;
 		else
 			return TYPE_UNKNOWN;
 	}
-	public int getNetworkType ()
-	{
+
+	public int getNetworkType() {
 		return mTelephonyManager.getNetworkType();
 	}
 
@@ -85,8 +89,8 @@ public abstract class DeviceInfo {
 	 * @return The phone number, or an empty string if it is unknown
 	 */
 	public String getPhoneNumber() {
-        String phonenum = mTelephonyManager.getLine1Number();
-        LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "MMCDevice", "getLine1Number:", phonenum);
+		String phonenum = mTelephonyManager.getLine1Number();
+		LoggerUtil.logToFile(LoggerUtil.Level.DEBUG, "MMCDevice", "getLine1Number:", phonenum);
 		return mTelephonyManager.getLine1Number() != null ? mTelephonyManager.getLine1Number() : "";
 	}
 
@@ -96,36 +100,83 @@ public abstract class DeviceInfo {
 	public Integer getMCC() {
 		String networkOperator = mTelephonyManager.getNetworkOperator();
 
-		if(networkOperator != null && networkOperator.length() > 3) {
-			String mcc =  networkOperator.substring(0, 3);
+		if (networkOperator != null && networkOperator.length() > 3) {
+			String mcc = networkOperator.substring(0, 3);
 			int MCC = 0;
-			try{
+			try {
 				MCC = Integer.parseInt(mcc);
-			} catch (Exception e) {}
+			} catch (Exception e) {
+			}
 			return MCC;
-		}
-		else {
+		} else {
 			return 0;
 		}
 	}
-	public String getIMSI()
-	{
-		try{
+
+	public String getIMSI() {
+		try {
 			String myIMSI = SystemPropertiesProxy.get(mContext, "persist.lg.data.firstopsim");
-			if (myIMSI != null && myIMSI.length() > 10)
-			{
+			if (myIMSI != null && myIMSI.length() > 10) {
 				if (myIMSI.length() > 15)
-					myIMSI = myIMSI.substring(0,15);
+					myIMSI = myIMSI.substring(0, 15);
 				return myIMSI;
 			}
-			return mTelephonyManager.getSubscriberId() != null ? mTelephonyManager.getSubscriberId() : "";
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+				if (mContext.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+					// TODO: Consider calling
+					//    Activity#requestPermissions
+					// here to request the missing permissions, and then overriding
+					//   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+					//                                          int[] grantResults)
+					// to handle the case where the user grants the permission. See the documentation
+					// for Activity#requestPermissions for more details.
+					return mTelephonyManager.getSubscriberId() != null ? mTelephonyManager.getSubscriberId() : "";
+				} else {
+					return "";
+				}
+			} else {
+				return mTelephonyManager.getSubscriberId() != null ? mTelephonyManager.getSubscriberId() : "";
+			}
 		}
 		catch (Exception e){}
 		return "";
 	}
 	public String getIMEI()
 	{
-		return mTelephonyManager.getDeviceId();
+		try {
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+				if (mContext.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+
+					String temp = mTelephonyManager.getDeviceId();
+					if (temp == null){
+						return getAndroidId ();
+					}
+					String deviceId = temp;
+					return deviceId;
+				} else {
+					return "";
+				}
+			} else {
+				return mTelephonyManager.getSubscriberId() != null ? mTelephonyManager.getSubscriberId() : "";
+			}
+
+		} catch (Exception e){
+			Log.e(TAG, "getDeviceId (IMEI) exception", e);
+			return getAndroidId ();
+		}
+
+	}
+	public String getAndroidId () {
+		try {
+			String androidId = Settings.Secure.getString(mContext.getContentResolver(),
+					Settings.Secure.ANDROID_ID);
+			String deviceId = androidId; // Build.MANUFACTURER + "_" + Build.MODEL + "_" + androidId;
+			return deviceId;
+		}
+		catch (Exception e2){
+			Log.e(TAG, "getDeviceId Cant even get ANDROID_ID exception", e2);
+		}
+		return null;
 	}
 	/**
 	 * @return The phone's mnc, or an empty string if it is unknown

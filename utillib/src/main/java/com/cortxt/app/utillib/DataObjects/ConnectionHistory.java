@@ -3,9 +3,12 @@ package com.cortxt.app.utillib.DataObjects;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.NetworkInfo;
 import android.net.TrafficStats;
+import android.os.Build;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 
@@ -20,7 +23,7 @@ public class ConnectionHistory {
 	public static final int TYPE_LATENCY = 101;
 	public static final int TYPE_DOWNLOAD = 102;
 	public static final int TYPE_UPLOAD = 103;
-	
+
 	public static final int TYPE_THROUGHPUT = 105;
 	public static final int TYPE_VIDEO = 106;
 	public static final int TYPE_SMSTEST = 107;
@@ -30,18 +33,20 @@ public class ConnectionHistory {
 	private List<ConnectionSample> connect_history = new ArrayList<ConnectionSample>();
 	private List<ServiceModeSample> svcmode_history = new ArrayList<ServiceModeSample>();
 	private long tmLastUpdate = 0, tmLastCellUpdate = 0;
-	private String lastConnectString = "";
+	//private String lastConnectString = "";
 	public static final String TAG = ConnectionHistory.class.getSimpleName();
 	private long rxLast = 0, txLast = 0;
 	private TcpStats tcpstats = new TcpStats();
-	
+
+	private int lastCellnettype = -1, lastState = -1, lastActivity = -1, lastActiveType = -1, lastServiceState = -1, lastVoiceType = -1;
+
 	// Called when a neighbor list is detected in the RadioLog
 	// It augments that neighbor list with the neighbor from the API
 	public String updateConnectionHistory (int cellnettype, int state, int activity, ServiceState serviceState, NetworkInfo networkInfo, Context context)
 	{
 		int i;
 		//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "onDataActivityChanged", String.format("Network type: %d, State: %d, Activity: %d", cellnettype, state, activity));
-		
+
 		tmLastUpdate = System.currentTimeMillis();
 		//if (!_isTravelling)
 		{
@@ -51,7 +56,7 @@ public class ConnectionHistory {
 			if (networkInfo != null)
 			{
 				//MMCLogger.logToFile(MMCLogger.Level.DEBUG, TAG, "onDataActivityChanged", String.format("ActiveNet: %s", networkInfo.toString()));
-				
+
 				activeType = networkInfo.getType();
 				//activeDetailState = networkInfo.getDetailedState().ordinal();
 			}
@@ -62,44 +67,66 @@ public class ConnectionHistory {
 				smp.serviceState = serviceState.getState();
 				if (serviceState.getRoaming() == true)
 					smp.serviceState += 10;
-				smp.voiceType = PhoneState.getVoiceNetworkType(serviceState);
+
+				smp.voiceType = PhoneState.getVoiceNetworkType(context);
+				if (smp.voiceType <= 0) {
+					smp.voiceType = cellnettype;
+				}
 			}
-			switch (activity)
-			{
-			case TelephonyManager.DATA_ACTIVITY_DORMANT:
-				stringConnections ="dormant"; break;
-			case TelephonyManager.DATA_ACTIVITY_IN:
-				stringConnections ="in"; break;
-			case TelephonyManager.DATA_ACTIVITY_OUT:
-				stringConnections ="out"; break;
-			case TelephonyManager.DATA_ACTIVITY_INOUT:
-				stringConnections ="inout"; break;
-			case TelephonyManager.DATA_ACTIVITY_NONE:
-				stringConnections ="none"; break;
-			
-			}
-			stringConnections = cellnettype + "," + state + "," + activity + "," + activeType + "," + serviceState + "," + smp.voiceType;
-			if (!lastConnectString.equals(stringConnections) && tcpstats != null)
-			{
+
+//			switch (activity)
+//			{
+//			case TelephonyManager.DATA_ACTIVITY_DORMANT:
+//				stringConnections ="dormant"; break;
+//			case TelephonyManager.DATA_ACTIVITY_IN:
+//				stringConnections ="in"; break;
+//			case TelephonyManager.DATA_ACTIVITY_OUT:
+//				stringConnections ="out"; break;
+//			case TelephonyManager.DATA_ACTIVITY_INOUT:
+//				stringConnections ="inout"; break;
+//			case TelephonyManager.DATA_ACTIVITY_NONE:
+//				stringConnections ="none"; break;
+//
+//			}
+			//stringConnections = cellnettype + "," + state + "," + activity + "," + activeType + "," + smp.serviceState + "," + smp.voiceType;
+
+			boolean changed = false;
+			if (cellnettype != lastCellnettype || state != lastState || activity != lastActivity || activeType != lastActiveType || smp.serviceState != lastServiceState || smp.voiceType != lastVoiceType) {
+				//changed = true;
+				lastCellnettype = cellnettype;
+				lastState = state;
+				lastActivity = activity;
+				lastActiveType = activeType;
+				lastServiceState = smp.serviceState;
+				lastVoiceType = smp.voiceType;
+
 				// Update Neighbor list history if state changes
 				connect_history.add(smp);
-				lastConnectString = stringConnections;
+				//lastConnectString = stringConnections;
 
 				long rx = TrafficStats.getTotalRxBytes();
 				long tx = TrafficStats.getTotalTxBytes();
 
-				tcpstats.readTcpStats(context, false);
-				tcpstats.updateCounts();
-				int tcprsts = tcpstats.tcpResets;
-				int tcperrs = tcpstats.tcpErrors;
-				int tcpretrans = tcpstats.tcpRetrans;
+				ConnectionSample smp2 = null;
+				if (tcpstats != null && Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+					tcpstats.readTcpStats(context, false);
+					tcpstats.updateCounts();
 
-				if (rx > rxLast || tx > txLast || tcpstats.tcpResets > tcpstats.prevResets || tcpstats.tcpErrors > tcpstats.prevErrors || tcpstats.tcpRetrans > tcpstats.prevRetrans)
-				{
-					ConnectionSample smp2 = new ConnectionSample(TYPE_RXTX, rx, tx, tcprsts, tcperrs, tcpretrans);
-					rxLast = rx; txLast = tx;
+					int tcprsts = tcpstats.tcpResets;
+					int tcperrs = tcpstats.tcpErrors;
+					int tcpretrans = tcpstats.tcpRetrans;
+
+					if (rx > rxLast || tx > txLast || tcpstats.tcpResets > tcpstats.prevResets || tcpstats.tcpErrors > tcpstats.prevErrors || tcpstats.tcpRetrans > tcpstats.prevRetrans) {
+						smp2 = new ConnectionSample(TYPE_RXTX, rx, tx, tcprsts, tcperrs, tcpretrans);
+						connect_history.add(smp2);
+					}
+				} else if (rx > rxLast || tx > txLast) {
+					smp2 = new ConnectionSample(TYPE_RXTX, rx, tx,0, 0, 0);
 					connect_history.add(smp2);
 				}
+				rxLast = rx;
+				txLast = tx;
+
 				lastRxTxUpdate = System.currentTimeMillis();
 				return stringConnections;
 			}
@@ -219,7 +246,8 @@ public class ConnectionHistory {
 	
 	public void start ()
 	{
-		lastConnectString = "";
+		lastState = -1;
+		//lastConnectString = "";
 	}
 	// Called when an event is being reported to the server
 	// It builds a neighbor list history that doesnt ovrlap the previously reported neighbor list history

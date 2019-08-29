@@ -100,6 +100,7 @@
     <item name="ASKFOR_SUPERUSER" type="integer" format="integer">-1</item>
     <item name="NOTIFY_CLICK_TO_LAUNCH" type="string" format="string">None</item>
     <item name="ALLOW_SERVICE_FOREGROUND" type="bool" format="boolean">true</item>
+    <item name="ALLOW_TRACK_DATAACTIVITY" type="bool" format="boolean">true</item>
     <item name="ALLOW_FULL_WAKELOCK" type="bool" format="boolean">true</item>
     <item name="ALLOW_CHECK_INS" type="bool" format="boolean">true</item>
     <item name="ALLOW_SVCMODE" type="bool" format="boolean">false</item>

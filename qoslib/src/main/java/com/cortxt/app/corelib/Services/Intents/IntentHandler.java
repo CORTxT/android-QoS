@@ -389,8 +389,7 @@ public class IntentHandler extends BroadcastReceiver {
 				extras = extras + "!";
 			if (apnType != null && apnType.equals("default") && apn != null)
 			{
-				SharedPreferences securePref = MainService.getSecurePreferences(context);
-				securePref.edit().putString(PreferenceKeys.Miscellaneous.KEY_APN, apn).commit();
+				PreferenceKeys.putSecurePreferenceString(PreferenceKeys.Miscellaneous.KEY_APN, apn, context);
 			}
 				
 		}

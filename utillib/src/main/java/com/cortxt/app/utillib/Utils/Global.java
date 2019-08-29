@@ -68,10 +68,13 @@ public class Global {
             bgServiceIntent.setComponent(new ComponentName(context.getPackageName(), "com.cortxt.app.corelib.MainService"));
             serviceNotification = notification;
             serviceNotificationId = notificationId;
-            LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "Global", "isServiceYeilded", "MMC Service started for " + packagename);
+            LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "Global", "startService", "MMC Service started for " + packagename);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(bgServiceIntent);
+                if (notification != null)
+                    context.startForegroundService(bgServiceIntent);
+                else
+                    LoggerUtil.logToFile(LoggerUtil.Level.ERROR, "Global", "startService failed", "notification=null for " + packagename);
             } else {
                 context.startService(bgServiceIntent);
             }
@@ -231,11 +234,14 @@ public class Global {
     {
         //if (mApikey != null)
         //    return mApikey;
-        if (context == null && callbacks != null)
-            context = callbacks.getContext ();
-        SharedPreferences securePref = PreferenceKeys.getSecurePreferences(context);
-        String value = securePref.getString(PreferenceKeys.User.APIKEY, null);
-        return value;
+        try {
+            if (context == null && callbacks != null)
+                context = callbacks.getContext();
+            String value = PreferenceKeys.getSecurePreferenceString(PreferenceKeys.User.APIKEY, null, context);
+            return value;
+        } catch (Exception e){
+        }
+        return null;
     }
 
     public static String getLogin (Context context)
@@ -244,18 +250,24 @@ public class Global {
         //    return mApikey;
         if (context == null && callbacks != null)
             context = callbacks.getContext ();
-        SharedPreferences securePref = PreferenceKeys.getSecurePreferences(context);
-        String value = securePref.getString(PreferenceKeys.User.USER_EMAIL, null);
-        return value;
+        try {
+            String value = PreferenceKeys.getSecurePreferenceString(PreferenceKeys.User.USER_EMAIL, null, context);
+            return value;
+        } catch (Exception e){
+        }
+        return null;
     }
 
     public static int getUserID (Context context)
     {
-        if (context == null && callbacks != null)
-            context = callbacks.getContext ();
-        SharedPreferences securePref = PreferenceKeys.getSecurePreferences(context);
-        int value = securePref.getInt(PreferenceKeys.User.USER_ID, -1);
-        return value;
+        try {
+            if (context == null && callbacks != null)
+                context = callbacks.getContext();
+            int value = PreferenceKeys.getSecurePreferenceInt(PreferenceKeys.User.USER_ID, -1, context);
+            return value;
+        }catch (Exception e){
+        }
+        return 0;
     }
 
     public static boolean isOnline(Context context) {

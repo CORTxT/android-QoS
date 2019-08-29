@@ -25,8 +25,7 @@ public class BootListener extends BroadcastReceiver {
 			if (!allowBoot)
 				return;
 			boolean isAuthorized = ReportManager.getInstance(context.getApplicationContext()).isAuthorized();
-            SecurePreferences securePrefs = MainService.getSecurePreferences(context);
-			boolean bStoppedService = securePrefs.getBoolean(PreferenceKeys.Miscellaneous.STOPPED_SERVICE, false);
+            boolean bStoppedService = PreferenceKeys.getSecurePreferenceBoolean(PreferenceKeys.Miscellaneous.STOPPED_SERVICE, false, context);
 			String yeilded = PreferenceManager.getDefaultSharedPreferences(context).getString(PreferenceKeys.Miscellaneous.YEILDED_SERVICE, null);
 			if (Global.isServiceYeilded(context))
 				bStoppedService = true;

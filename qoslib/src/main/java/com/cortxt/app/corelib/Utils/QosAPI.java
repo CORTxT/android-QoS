@@ -86,8 +86,7 @@ public class QosAPI {
      */
     public static String getLogin (Context context)
     {
-        SharedPreferences securePref = MainService.getSecurePreferences(context);
-        String value = securePref.getString (PreferenceKeys.User.USER_EMAIL, null);
+        String value = PreferenceKeys.getSecurePreferenceString (PreferenceKeys.User.USER_EMAIL, null, context);
         return value;
     }
     /**
@@ -101,8 +100,7 @@ public class QosAPI {
      */
     public static String getPassword (Context context)
     {
-        SharedPreferences securePref = MainService.getSecurePreferences(context);
-        String value = securePref.getString (PreferenceKeys.User.USER_PASSWORD, null);
+        String value = PreferenceKeys.getSecurePreferenceString (PreferenceKeys.User.USER_PASSWORD, null, context);
         return value;
     }
 
@@ -116,13 +114,12 @@ public class QosAPI {
      */
     public static void setLogin (Context context, String login)
     {
-        SharedPreferences securePref = MainService.getSecurePreferences(context);
-        String oldlogin = securePref.getString(PreferenceKeys.User.USER_EMAIL, "");
+        String oldlogin = PreferenceKeys.getSecurePreferenceString (PreferenceKeys.User.USER_EMAIL, "", context);
         if (oldlogin == null)
             oldlogin = "";
         if (login == null || oldlogin.equals(login) || login.length() < 3)
             return;
-        securePref.edit().putString(PreferenceKeys.User.USER_EMAIL, login).commit ();
+        PreferenceKeys.putSecurePreferenceString (PreferenceKeys.User.USER_EMAIL, login, context);
         registerLogin(context, login);
     }
 
@@ -137,14 +134,13 @@ public class QosAPI {
      */
     public static void setLogin (Context context, String login, String password)
     {
-        SharedPreferences securePref = MainService.getSecurePreferences(context);
-        String oldlogin = securePref.getString(PreferenceKeys.User.USER_EMAIL, "");
+        String oldlogin = PreferenceKeys.getSecurePreferenceString (PreferenceKeys.User.USER_EMAIL, "", context);
         if (oldlogin == null)
             oldlogin = "";
         if (login == null || oldlogin.equals(login) || login.length() < 3)
             return;
-        securePref.edit().putString(PreferenceKeys.User.USER_EMAIL, login).commit ();
-        securePref.edit().putString(PreferenceKeys.User.USER_PASSWORD, password).commit ();
+        PreferenceKeys.putSecurePreferenceString (PreferenceKeys.User.USER_EMAIL, login, context);
+        PreferenceKeys.putSecurePreferenceString (PreferenceKeys.User.USER_PASSWORD, password, context);
         registerLogin(context, login, password);
     }
 
@@ -156,14 +152,14 @@ public class QosAPI {
      */
     public static void setLoginToIMEI (Context context)
     {
-        SharedPreferences securePref = MainService.getSecurePreferences(context);
+        //SharedPreferences securePref = MainService.getSecurePreferences(context);
         ReportManager manager = ReportManager.getInstance(context);
         String imei = manager.getDevice().getIMEI();
 
-        String oldlogin = securePref.getString(PreferenceKeys.User.USER_EMAIL, "");
+        String oldlogin = PreferenceKeys.getSecurePreferenceString (PreferenceKeys.User.USER_EMAIL, "", context);
         if (imei == null || oldlogin.equals(imei) || imei.length() < 3)
             return;
-        securePref.edit().putString(PreferenceKeys.User.USER_EMAIL, imei).commit ();
+        PreferenceKeys.putSecurePreferenceString (PreferenceKeys.User.USER_EMAIL, imei, context);
         registerLogin(context, imei);
     }
 
